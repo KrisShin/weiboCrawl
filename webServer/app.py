@@ -18,6 +18,8 @@ SQLALCHEMY_TRACK_MODIFICATIONS = True
 SQLALCHEMY_COMMIT_ON_TEARDOWN = False
 
 
+
+
 app = Flask(__name__)
 
 app.config.update(
