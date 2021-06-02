@@ -1,7 +1,6 @@
 from flask import Flask
-from flask.json import jsonify
-from flask.templating import render_template
 from flask_sqlalchemy import SQLAlchemy
+from views import weibo
 
 
 # sqlalchemy object
@@ -28,16 +27,7 @@ app.config.update(
 
 db.init_app(app)
 
-
-@app.route('/test', methods=['GET', "POST"])
-def test_hello():
-    return jsonify({'msg': 'hello flask'})
-
-
-@app.route('/', methods=['GET', 'POST'])
-def show_page():
-    return render_template('list.html')
-
+app.register_blueprint(weibo)
 
 if __name__ == '__main__':
     app.run(port=5001)

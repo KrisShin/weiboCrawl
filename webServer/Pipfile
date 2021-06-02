@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-flask-blueprint = "*"
 flask-sqlalchemy = "*"
 flask-migrate = "==2.7.0"
 flask-script = "*"
