@@ -1,7 +1,8 @@
 
 from flask_script import Manager
 from flask_migrate import Migrate, MigrateCommand
-from app import db, app
+from app import app
+from db_init import db
 from models import *
 
 # 初始化 migrate

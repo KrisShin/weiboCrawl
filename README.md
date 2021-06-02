@@ -17,10 +17,11 @@ server 端:(flask)
     ```
     授权用户
     ```
-    grant all privileges on weibo.* to 'webuser'@'localhost'
+    grant all privileges on weibo.* to 'webuser'@'localhost';
     ```
 
 2.  mysql恢复数据
+    恢复mysql: ```mysql -uwebuser -p weibo < weibo_db.sql``` 密码:123456
 
 3.  配置flask运行环境
     进入webServer文件夹
@@ -47,7 +48,9 @@ server 端:(flask)
 #### 数据备份恢复
 
 进入webServer
+
 备份mysql: ```mysqldump -uwebuser -p -d weibo > weibo_db.sql``` 密码:123456
+
 恢复mysql: ```mysql -uwebuser -p weibo < weibo_db.sql``` 密码:123456
 
 
