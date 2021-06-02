@@ -6,7 +6,7 @@ from views import weibo
 # sqlalchemy object
 db = SQLAlchemy()
 
-db_type = r'mysql'
+db_type = r'pymysql'
 user = r'webuser'
 password = r'123456'
 database = r'weibo'
