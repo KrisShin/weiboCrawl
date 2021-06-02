@@ -9,16 +9,23 @@ weibo = Blueprint('weibo', __name__, template_folder='templates')
 
 @weibo.route('/test', methods=['GET', "POST"])
 def test_hello():
+    '''
+    测试返回 hello flask
+    '''
     return jsonify({'msg': 'hello flask'})
 
 
 @weibo.route('/', methods=['GET', 'POST'])
 def show_page():
+    '''
+    测试返回页面
+    '''
     return render_template('list.html')
 
 @weibo.route('/add_test_topic', methods=['GET', 'POST'])
 def test_add_topic():
     '''
+    测试添加一个test topic
     from views import test_add_topic
     test_add_topic()
     '''

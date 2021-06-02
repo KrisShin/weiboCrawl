@@ -4,6 +4,7 @@ from views import weibo
 
 app = create_app()
 
+# 注册蓝图路由
 app.register_blueprint(weibo)
 
 
