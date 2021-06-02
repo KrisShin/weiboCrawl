@@ -9,9 +9,31 @@
 
 #### 安装教程
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+server 端:(flask)
+1.  mysql创建数据库和用户
+    ```
+    create database weibo;
+    create user 'webuser'@'localhost' identified by '123456';
+    ```
+    授权用户
+    ```
+    grant all privileges on weibo.* to 'webuser'@'localhost'
+    ```
+
+2.  mysql恢复数据
+
+3.  配置flask运行环境
+    进入webServer文件夹
+    ```
+    pipenv install
+    ```
+    **如果提示没有pipenv**
+    可以使用```pip install pipenv```来安装
+    然后使用```pipenv shell```进入虚拟环境
+
+4.  启动web服务
+    ```python run app.py```
+    访问http://localhost:5001可以查看项目
 
 #### 使用说明
 
