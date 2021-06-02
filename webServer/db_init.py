@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+
 def create_app():
     # 初始化app 并配置数据库连接
     app = Flask(__name__)
