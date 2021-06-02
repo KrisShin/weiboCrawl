@@ -17,7 +17,7 @@ server 端:(flask)
     ```
     授权用户
     ```
-    grant all privileges on weibo.* to 'webuser'@'localhost'
+    grant all privileges on weibo.* to 'webuser'@'localhost';
     ```
 
 2.  mysql恢复数据
