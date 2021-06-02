@@ -21,10 +21,9 @@ SQLALCHEMY_COMMIT_ON_TEARDOWN = False
 app = Flask(__name__)
 
 app.config.update(
-        SQLALCHEMY_DATABASE_URI = f'{db_type}://{user}:{password}@{host}:{port}/{database}',
-SQLALCHEMY_TRACK_MODIFICATIONS = True,
+    SQLALCHEMY_DATABASE_URI=f'{db_type}://{user}:{password}@{host}:{port}/{database}',
+    SQLALCHEMY_TRACK_MODIFICATIONS=True,
     SQLALCHEMY_COMMIT_ON_TEARDOWN=False
-
 )
 
 db.init_app(app)
@@ -41,4 +40,4 @@ def show_page():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001)
+    app.run(port=5001)

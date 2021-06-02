@@ -27,10 +27,13 @@ server 端:(flask)
     ```
     pipenv install
     ```
+    
     **如果提示没有pipenv**
+
     可以使用```pip install pipenv```来安装
     然后使用```pipenv shell```进入虚拟环境
 
+    **flask 版本必须小于2.0 falsk-migrate 必须小于3.0**
 4.  启动web服务
     ```python run app.py```
     访问http://localhost:5001可以查看项目
