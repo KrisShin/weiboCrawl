@@ -20,7 +20,7 @@ def show_page():
     '''
     测试返回页面
     '''
-    return render_template('list.html')
+    return render_template('index.html')
 
 
 @weibo.route('/all_topic', methods=['GET'])
