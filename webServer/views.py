@@ -43,7 +43,8 @@ def api_get_all_comment():
     comment_list = [dict(comment) for comment in comment_list]
     return jsonify(comment_list)
 
-# @weibo.route('/test_data', methods=['GET'])
+
+@weibo.route('/test_data', methods=['GET'])
 def add_test_data():
     '''
     add some data for test
@@ -56,23 +57,25 @@ def add_test_data():
         db.session.add(t)
         db.session.commit()
         for f_id in range(3):
-            f = Feed(topic=t, content=f'feed {f_id} of topic {t.name}')
-            f.forward_count = randint(99,999)
-            f.comment_count = randint(99,999)
-            f.like_count = randint(99,999)
+            f = Feed(mid=str(randint(1000, 9999)), topic=t,
+                     content=f'feed {f_id} of topic {t.name}')
+            f.forward_count = randint(99, 999)
+            f.comment_count = randint(99, 999)
+            f.like_count = randint(99, 999)
             f.publish_time = datetime.now()
             db.session.add(f)
             db.session.commit()
             for c_id in range(3):
-                c = Comment(feed=f, content=f'comment {c_id} of feed {f.id}')
+                c = Comment(id=str(randint(1000, 9999)), feed=f,
+                            content=f'comment {c_id} of feed {f.mid}')
                 c.publish_time = datetime.now()
-                c.like_count = randint(99,999)
-                c.reply_count = randint(99,999)
-                c.reply_like = randint(99,999)
+                c.like_count = randint(99, 999)
+                c.reply_count = randint(99, 999)
+                c.reply_like = randint(99, 999)
                 db.session.add(c)
                 db.session.commit()
 
-    return jsonify({'msg':'ok'})
+    return jsonify({'msg': 'ok'})
 
 
 def migrate_mongo_to_mysql():
