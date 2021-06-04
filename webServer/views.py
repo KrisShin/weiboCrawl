@@ -114,3 +114,17 @@ def search_feed():
     TODO: use Jieba to split words, and search it by sql statement with "like".
     '''
     pass
+
+
+@weibo.route('/api/update_crawl_data', methods=['GET'])
+def update_crawl_data():
+    from spiders import weibo_hot
+    from threading import Thread
+
+    job = Thread(target=weibo_hot.main, args=(50,))
+
+    job.start()
+    return jsonify({'msg':'OK'})
+    
+
+    
