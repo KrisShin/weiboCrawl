@@ -9,9 +9,35 @@
 
 #### 安装教程
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+server 端:(flask)
+1.  mysql创建数据库和用户
+    ```
+    create database weibo;
+    create user 'webuser'@'localhost' identified by '123456';
+    ```
+    授权用户
+    ```
+    grant all privileges on weibo.* to 'webuser'@'localhost';
+    ```
+
+2.  mysql恢复数据
+    恢复mysql: ```mysql -uwebuser -p weibo < weibo_db.sql``` 密码:123456
+
+3.  配置flask运行环境
+    进入webServer文件夹
+    ```
+    pipenv install
+    ```
+    
+    **如果提示没有pipenv**
+
+    可以使用```pip install pipenv```来安装
+    然后使用```pipenv shell```进入虚拟环境
+
+    **flask 版本必须小于2.0 falsk-migrate 必须小于3.0**
+4.  启动web服务
+    ```python run app.py```
+    访问http://localhost:5001可以查看项目
 
 #### 使用说明
 
@@ -19,12 +45,13 @@
 2.  xxxx
 3.  xxxx
 
-#### 参与贡献
+#### 数据备份恢复
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+进入webServer
+
+备份mysql: ```mysqldump -uwebuser -p -d weibo > weibo_db.sql``` 密码:123456
+
+恢复mysql: ```mysql -uwebuser -p weibo < weibo_db.sql``` 密码:123456
 
 
 #### 特技
