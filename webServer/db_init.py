@@ -6,7 +6,7 @@ db = SQLAlchemy()
 
 def create_app():
     # 初始化app 并配置数据库连接
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='./static')
     db_type = r'mysql+pymysql'
     user = r'webuser'
     password = r'123456'
