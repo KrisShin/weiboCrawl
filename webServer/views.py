@@ -73,3 +73,41 @@ def add_test_data():
                 db.session.commit()
 
     return jsonify({'msg':'ok'})
+
+
+def migrate_mongo_to_mysql():
+    '''
+    TODO:
+    {
+        "_id" : ObjectId("60b909f0c2a19ae3fae062ee"),
+        "mid" : "4643945000996897",
+        "link" : "https://weibo.com/1792951112/Kird24bkZ",
+        "publishTime" : "2021-06-03 10:10",
+        "from" : "微博视频号",
+        "topicList" : [ 
+            "#自信绽放 笑着见#"
+        ],
+        "contentList" : [ 
+            "\n                                                                                                                        用自然美学与动人科技结合的", 
+            " 守护你的自信笑容，从今天开始", 
+            "。", 
+            " ​​​​                                            "
+        ],
+        "shareCount" : "100万+",
+        "commentCount" : "100万+",
+        "likeCount" : "4613862",
+        "user" : {
+            "headPic" : "https://tvax2.sinaimg.cn/crop.261.201.600.600.1024/6ade4348ly8ge5avdm8jbj20u00u075k.jpg?KID=imgbed,tva&Expires=1622750234&ssig=Wwg6CwayR9",
+            "nickname" : "X玖少年团肖战DAYTOY",
+            "homepage" : "https://weibo.com/xiaozhan1"
+        }
+    }
+    '''
+    pass
+
+
+def search_feed():
+    '''
+    TODO: use Jieba to split words, and search it by sql statement with "like".
+    '''
+    pass
