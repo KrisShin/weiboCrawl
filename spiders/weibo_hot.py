@@ -11,17 +11,24 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 
 chrome_options = Options()
+# 设置 webdriver 无头运行
 chrome_options.add_argument('--headless')
+# 初始化 webdriver
 driver = webdriver.Chrome(
-    executable_path="D:\workplace\chromedriver.exe", chrome_options=chrome_options)
+    executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
 
+# 屏蔽 https 证书报警信息
 urllib3.disable_warnings()
 
+# 定义 session  请求头，设置 UA
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36'
 }
+
+# 定义异常数量全局变量
 EXCEPTION_COUNT = 0
-MAX_EXCEPTION_COUNT = 100
+# 定义异常最大值全局变量
+MAX_EXCEPTION_COUNT = 1000
 
 
 class DBConn:
@@ -38,28 +45,31 @@ class DBConn:
         return self.conn
 
 
+# 记录抓取异常
+def record_exception_count():
+    global EXCEPTION_COUNT
+    EXCEPTION_COUNT += 1
+    # 抓取异常次数达到最大值时抛出异常
+    if EXCEPTION_COUNT > MAX_EXCEPTION_COUNT:
+        print("exceed max exception count")
+        raise RuntimeError
+
+
+# 初始化 chromedriver 获取首页 cookie
 def init_driver():
     driver.get("https://weibo.com/login.php?category=0")
     try:
+        # 等待页面热点列表出现后再继续执行
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located(
                 (By.XPATH, '//div[@class="UG_contents"]/ul/div//div[@class="list_des"]'))
         )
     except Exception:
-        driver.quit()
         print("driver init failed")
-        exit(1)
+        raise RuntimeError
 
 
-def record_exception_count():
-    global EXCEPTION_COUNT
-    EXCEPTION_COUNT += 1
-    if EXCEPTION_COUNT > MAX_EXCEPTION_COUNT:
-        print("exceed max exception count")
-        driver.quit()
-        exit(1)
-
-
+# 获取首页 session，用于抓取首页热点列表信息
 def get_weibo_session():
     s = requests.Session()
     resp = s.get(
@@ -67,22 +77,24 @@ def get_weibo_session():
     headers['refer'] = "https://weibo.com/login.php?category=0"
     if resp.status_code != 200:
         print("get weibo session failed")
-        exit(1)
+        raise RuntimeError
     return s
 
 
+# 通过 session 请求指定页的热点列表
 def request_hot_list(s, page):
     path = "https://weibo.com/a/aj/transform/loadingmoreunlogin?ajwvr=6&category=0&page={}&lefnav=0&cursor=&__rnd={}".format(
         page, int(time.time()*1000))
     resp = s.get(
         path, headers=headers, verify=False)
     if resp.status_code != 200:
-        record_exception_count()
-        return None
+        # 记录请求页面异常
+        return record_exception_count()
     data = json.loads(resp.text)
     return data.get('data', '')
 
 
+# 解析首页热点列表链接
 def parse_hot_link(html):
     if not html:
         return None
@@ -95,19 +107,63 @@ def parse_hot_link(html):
     return result
 
 
+# 请求热点链接获取热点详情页 html 用于后续解析
 def request_hot_detail(link):
     driver.get(link)
     try:
+        # 等待热点评论节点出现后再继续执行，保证页面加载完整
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located(
-                (By.XPATH, '//div[@class="repeat_list"]'))
+                (By.XPATH, '//div[@node-type="root_comment"]'))
         )
-    except Exception:
-        record_exception_count()
-        return ""
+        # 将页面滑动到最低端，加载更多评论信息
+        driver.execute_script(
+            "window.scrollTo(0, document.body.scrollHeight);")
+    except Exception as e:
+        print(repr(e))
+        # 记录请求页面异常
+        return record_exception_count()
     return driver.page_source
 
 
+# 格式化 xpath 解析的热点列表
+def format_link_list(link_list):
+    result = []
+    for link in link_list:
+        if link == "" or link in result:
+            continue
+        # 解析的页面可能没有 https 前缀，需要添加
+        if not link.startswith("https:"):
+            link = 'https:{}'.format(link)
+        result.append(link)
+    return result
+
+
+# 格式化点赞数转发数等数字类型字符串，因为没有评论或点赞时会是对应的描述，因此需要特殊处理
+def format_number(s):
+    try:
+        n = int(s)
+        return n
+    except ValueError:
+        pass
+    return 0
+
+
+# 解析获取 @xxx 列表
+def parse_at_name_list(selector):
+    result = []
+    # 获取相关标签列表
+    at_name_tags = selector.xpath(
+        '//div[@class="WB_detail"]//a[@extra-data="type=atname"]')
+    for a in at_name_tags:
+        result.append({
+            "atName": ''.join(a.xpath('./text()')),
+            "link": 'https:{}'.format(''.join(a.xpath('./@href')))
+        })
+    return result
+
+
+# 使用 xpath 解析热点详情页面源码，生成存入数据库的数据
 def parse_hot_detail(html, link):
     if not html:
         return None
@@ -119,9 +175,12 @@ def parse_hot_detail(html, link):
         "from": ''.join(selector.xpath('//div[@class="WB_detail"]/div[@class="WB_from S_txt2"]/a[2]/text()')),
         "topicList": selector.xpath('//div[@class="WB_detail"]/div[@class="WB_text W_f14"]/a[@class="a_topic"]/text()'),
         "contentList": selector.xpath('//div[@class="WB_detail"]/div[@class="WB_text W_f14"]/text()'),
-        "shareCount": ''.join(selector.xpath('//div[@class="WB_handle"]/ul/li[2]//span[@class="line S_line1"]/span//em[2]/text()')),
-        "commentCount": ''.join(selector.xpath('//div[@class="WB_handle"]/ul/li[3]//span[@class="line S_line1"]/span//em[2]/text()')),
-        "likeCount": ''.join(selector.xpath('//div[@class="WB_handle"]/ul/li[4]//span[@class="line S_line1"]/span//em[2]/text()'))
+        "atNameList": parse_at_name_list(selector),
+        "imageList": format_link_list(selector.xpath('//div[@class="WB_detail"]//img[not(@class="W_img_face")]/@src')),
+        "videoList": format_link_list(selector.xpath('//div[@class="WB_detail"]//div[@class="media_box"]//video/@src')),
+        "shareCount": format_number(''.join(selector.xpath('//div[@class="WB_handle"]/ul/li[2]//span[@class="line S_line1"]/span//em[2]/text()'))),
+        "commentCount": format_number(''.join(selector.xpath('//div[@class="WB_handle"]/ul/li[3]//span[@class="line S_line1"]/span//em[2]/text()'))),
+        "likeCount": format_number(''.join(selector.xpath('//div[@class="WB_handle"]/ul/li[4]//span[@class="line S_line1"]/span//em[2]/text()')))
     }
     user_info = {
         # 头像
@@ -135,40 +194,89 @@ def parse_hot_detail(html, link):
     return hot_detail
 
 
+# 解析评论
+def parse_comments(html, mid):
+    if not html:
+        return None
+
+    result = []
+    selector = etree.HTML(html)
+    comment_div_list = selector.xpath(
+        '//div[@class="repeat_list"]/div[@node-type="feed_list"]/div[@class="list_box"]/div[@class="list_ul"]/div')
+    for div in comment_div_list:
+        comment_detail = {
+            "mid": mid,
+            "commentId": ''.join(div.xpath('./@comment_id')),
+            "user": {
+                "headPic": 'https:{}'.format(''.join(div.xpath('./div[@class="WB_face W_fl"]/a/@href'))),
+                "homepage": 'https:{}'.format(''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_text"]/a[1]/@href'))),
+                "nickname": ''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_text"]/a[1]/text()'))
+            },
+            "contentList": div.xpath('./div[@class="list_con"]/div[@class="WB_text"]/text()'),
+            "likeCount": format_number(''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_func clearfix"]//span[@node-type="like_status"]/em[2]/text()')))
+        }
+        result.append(comment_detail)
+    return result
+
+
+# 开始抓取
 def crawl(total, conn):
     count = 0
     page = 1
 
-    init_driver()
-    s = get_weibo_session()
-    while True:
-        html = request_hot_list(s, page)
-        link_list = parse_hot_link(html)
-        if not link_list:
-            record_exception_count()
-            continue
-        for link in link_list:
-            detail_html = request_hot_detail(link)
-            hot_detail = parse_hot_detail(detail_html, link)
-            mid = hot_detail.get('mid', '')
-            if not hot_detail or mid == '':
+    # 处理异常，用于正常关闭数据库连接和 webdriver
+    try:
+        # 初始化 webdriver
+        init_driver()
+        # 获取首页 session
+        s = get_weibo_session()
+        # 控制抓取数量
+        while count < total:
+            # 获取首页热点列表
+            html = request_hot_list(s, page)
+            if html == None:
+                continue
+            page += 1
+            link_list = parse_hot_link(html)
+            if not link_list:
+                # 记录解析异常
                 record_exception_count()
                 continue
-            conn.test.data.insert_one(hot_detail)
-            break
-        break
+            for link in link_list:
+                # 请求热点详情页
+                detail_html = request_hot_detail(link)
+                # 解析热点详情
+                hot_detail = parse_hot_detail(detail_html, link)
+                if not hot_detail or hot_detail.get('mid', '') == '':
+                    # 解析数据异常，记录异常
+                    record_exception_count()
+                    continue
+                count += 1
+                # 热点详情存入数据库
+                conn.test.weiboHot.insert_one(hot_detail)
+                # 解析热点评论
+                comments = parse_comments(detail_html, hot_detail['mid'])
+                if len(comments) > 0:
+                    # 热点评论存入数据库
+                    conn.test.weiboHotComment.insert_many(comments)
+    except Exception as e:
+        print(repr(e))
+    finally:
+        # 关闭数据库连接和 webdriver
+        print("close db conn and webdriver")
+        conn.close()
+        driver.quit()
+        # 重置异常设置，用于下次重新执行抓取
+        EXCEPTION_COUNT = 0
+        MAX_EXCEPTION_COUNT = 0
+    return
 
 
 def main():
     db = DBConn()
     db.connect()
     conn = db.get_conn()
-
-    try:
-        crawl(10, conn)
-    finally:
-        conn.close()
-        driver.quit()
+    crawl(100, conn)
 
 
 if __name__ == '__main__':
