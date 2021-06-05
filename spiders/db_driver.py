@@ -16,7 +16,7 @@ class DBDriver(object):
             user='webuser',
             passwd='123456',
             db='weibo',
-            charset='utf8'
+            charset='utf8mb4'
         )
 
         self.cursor = self.db.cursor()
@@ -51,29 +51,47 @@ class DBDriver(object):
                     print(err)
                     raise Exception('insert topic failed.')
 
-    def insert_feed(self, feed: dict):
+    def insert_feed(self, feed: dict, topic_id_list):
         keys = ','.join(feed.keys())
-        values = ','.join(
-            [f"'{v}'" if isinstance(v, str) else json.dumps(v) for v in feed.values()])
+        values = []
+        for val in feed.values():
+            if isinstance(val, str):
+                values.append(rf"'{val}'")
+            elif isinstance(val, list) or isinstance(val,dict):
+                values.append(r"'{}'".format(str(val).replace("'",'"')))
+            elif isinstance(val, int):
+                values.append(str(val))
+            else:
+                raise Exception('unsupport data type', type(val), val)
 
-        sql_string = f"replace into feed({keys}) values({values});"
+        sql_string = f"""insert ignore into feed({keys}) values({','.join(values)});"""
         with self.db.cursor() as cursor:
+            last_id = None
             try:
-                cursor.execute(sql_string)
+                cursor.execute(sql_string.replace(r"\'", r"'"))
                 last_id = cursor.lastrowid
                 self.db.commit()
-                return last_id
             except Exception as err:
                 self.db.rollback()
                 print(err)
                 raise Exception('insert feed failed')
+            try:
+                tid_str_list=[]
+                for tid in topic_id_list:
+                    tid_str_list.append(f"""('{tid}', '{feed["mid"]}')""")
+                sql_string_relationship = f"""insert ignore into rs_topic_feed(topic_id, feed_mid) VALUES{','.join(tid_str_list)};"""
+                cursor.execute(sql_string_relationship)
+                self.db.commit()
+            except Exception:
+                pass
+            return last_id
 
     def insert_comment(self, comment: dict):
         keys = ','.join(comment.keys())
         values = ','.join(
-            [f"'{v}'" if isinstance(v, str) else json.dumps(v) for v in comment.values()])
+            [f"'{v}'" if isinstance(v, str) else str(v) for v in comment.values()])
 
-        sql_string = f"replace into comment({keys}) values({values});"
+        sql_string = f"insert ignore into comment({keys}) values({values});"
         with self.db.cursor() as cursor:
             try:
                 cursor.execute(sql_string)

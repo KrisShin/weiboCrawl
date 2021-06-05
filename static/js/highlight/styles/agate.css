@@ -106,3 +106,16 @@
   color: inherit;
   text-decoration: underline;
 }
+
+.size-50 {
+  height: 50px;
+  width: 50px;
+}
+
+.inline-flex {
+  display: inline-flex;
+}
+
+.m-horizon-3 {
+  margin: 0 5px 0 5px;
+}

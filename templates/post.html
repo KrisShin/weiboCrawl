@@ -20,7 +20,7 @@
   <header class="lyear-header text-center" style="background-image:url(images/left-bg.jpg);">
     <div class="lyear-header-container">
       <div class="lyear-mask"></div>
-      <h1 class="lyear-blogger pt-lg-4 mb-0"><a href="index.html">You Will Find Something Fun</a></h1>
+      <h1 class="lyear-blogger pt-lg-4 mb-0"><a href="/">信息采集分类系统</a></h1>
       <nav class="navbar navbar-expand-lg">
         <a class="navbar-toggler" data-toggle="collapse" data-target="#navigation" aria-controls="navigation"
           aria-expanded="false" aria-label="Toggle navigation">
@@ -31,29 +31,41 @@
 
         <div id="navigation" class="collapse navbar-collapse flex-column">
           <div class="profile-section pt-3 pt-lg-0">
-            <a onclick="updateCrawl()">
-
-              <img class="profile-image mb-3 rounded-circle mx-auto"
-                src="http://p2.img.cctvpic.com/nettv/newgame/cdn_pic/mzl.amvyqtlq.png" width="120" height="120"
-                alt="微博热门">
-            </a>
-            <div class="lyear-sentence mb-3">这里是一些热门的话题， 点击你想看的内容吧, 如果你需要更新数据， 请点击微博头像吧</div>
+            <div class="lyear-sentence mb-3">输入你想收集的地址， 获取你想看的内容吧</div>
             <hr>
           </div>
+          <div class="my-2 my-md-3" style="display: flex;width: -webkit-fill-available;">
+            <input type="email" id="semail" name="semail1" class="form-control mr-md-1" placeholder="输入url 例如：weibo.com"
+              onchange="changeKeyString(value)" />
+            <button class="my-2 my-md-1" style="flex: none;" onclick="updateCrawl()">开始</button>
+          </div>
+          <div class="my-2 my-md-3" style="display: flex;width: -webkit-fill-available;">
+            <input type="email" id="semail" name="semail1" class="form-control mr-md-1" placeholder="搜索关键词"
+              onchange="changeKeyString(value)" />
+            <button class="my-2 my-md-1" style="flex: none;" onclick="searchKeyWords()">开始 </button>
+          </div>
+          <div class="my-2 my-md-3" style="display: flex;width: -webkit-fill-available;">
+            <input type="email" id="semail" name="semail1" class="form-control mr-md-1" placeholder="屏蔽关键词"
+              onchange="changeKeyString(value)" />
+            <button class="my-2 my-md-1" style="flex: none;" onclick="searchNoKeyWords()">开始 </button>
+          </div>
 
+          <div>
+            {% for word in words %}
+            <a style="color: aqua;" href="/search?search_str={{word}}">{{word}}</a>
+            {% endfor %}
+          </div>
+
+          <hr>
+          <h5 class="lyear-sentence mb-3">选择你想看的热门话题吧</h5>
           <ul class="navbar-nav flex-column text-center">
             {% for topic in topic_list %}
             <li class="nav-item active">
-              <a class="nav-link" href="/topic/?topic={{topic.id}}">{{ topic.name }}</a>
+              <a class="nav-link" href="/topic?topic={{topic.id}}">{{ topic.name }}</a>
             </li>
             {% endfor %}
           </ul>
 
-          <div class="my-2 my-md-3">
-            <input type="email" id="semail" name="semail1" class="form-control mr-md-1" placeholder="搜索关键词"
-              onchange="changeKeyString(value)" />
-            <button onclick="searchKeyWords()">搜索 </button>
-          </div>
         </div>
       </nav>
     </div>
@@ -67,10 +79,10 @@
           <div class="col-xl-8">
             <article class="lyear-arc">
               <div class="arc-header">
-                <h2 class="arc-title"><img class="d-flex mr-3 rounded-circle" src="{{feed.user_avatar}}"
+                <h2 class="arc-title inline-flex"><img class="d-flex mr-3 rounded-circle size-50" src="{{feed.user_avatar}}"
                     alt="{{feed.user_name}}"><a href="#">{{feed.user_name}}-{{feed.topic}}</a></h2>
                 <ul class="arc-meta">
-                  <li><i class="mdi mdi-calendar"></i> {{feed.publish_time[:19]}}</li>
+                  <li><i class="mdi mdi-calendar"></i> {{feed.publish_time}}</li>
                   <!-- <li><i class="mdi mdi-tag-text-outline"></i> <a href="#">AI</a>, <a href="#">芯片</a></li> -->
                   <li><i class="mdi mdi-thumb-up-outline"></i> <a href="#">{{feed.like_count}} 点赞</a></li>
                   <li><i class="mdi mdi-comment-multiple-outline"></i> <a href="#">{{feed.comment_count}} 评论</a></li>
@@ -78,9 +90,11 @@
                 </ul>
               </div>
 
-              <!-- <div class="arc-preview">
-              <img src="/static/images/blog/post-1.png" alt="" class="img-fluid rounded" />
-            </div> -->
+              <div class="arc-preview">
+                {% for img in feed.image_list %}
+                <img src="{{img}}" alt="" class="img-fluid rounded" />
+                {% endfor %}
+            </div>
 
               <div class="lyear-arc-detail">
                 <p>{{feed.content}}</p>
@@ -176,28 +190,19 @@ export  $initHighlight;
                   {% for comment in comment_list %}
                   <li id="comment-2">
                     <div class="media">
-                      <img class="d-flex mr-3 rounded-circle" src="{{comment.user_avatar}}" alt="{{comment.user_name}}">
+                      <img class="d-flex mr-3 rounded-circle"
+                          src="{{ comment.user_avatar }}" alt="{{comment.user_name}}">
                       <div class="media-body">
                         <h4 class="media-heading"><a href="#!">{{comment.user_name}}</a></h4>
-                        <p class="text-muted post-date">{{comment.publish_time[:19]}}</p>
                         <a href="#!" class="text-custom reply-btn" data-id="3"><i class="mdi mdi-thumb-up"></i>&nbsp;
                           ({{comment.like_count}})点赞</a>
+                          <br>
+                        <a href="#!" class="text-custom reply-btn" data-id="3"><i class="mdi mdi-reply"></i>&nbsp;
+                          ({{comment.reply_count}})回复</a>
                         <p>{{comment.content}}</p>
                       </div>
                     </div>
-                    <ul class="comment-children">
-                      <li id="comment-3">
-                        <div class="media">
-                          <div class="media-body">
-                            <a href="#!" class="text-custom reply-btn" data-id="3"><i class="mdi mdi-reply"></i>&nbsp;
-                              ({{comment.reply_count}})回复</a>
-                            <h4 class="media-heading"><a href="#!">{{comment.reply_user}}</a></h4>
-                            <p class="text-muted post-date">{{comment.reply_time}}</p>
-                            <p>{{comment.reply_content}}</p>
-                          </div>
-                        </div>
-                      </li>
-                    </ul>
+                    
                   </li>
                   {% endfor %}
 
