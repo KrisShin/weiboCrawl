@@ -15,7 +15,9 @@ chrome_options = Options()
 chrome_options.add_argument('--headless')
 # 初始化 webdriver
 driver = webdriver.Chrome(
-    executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
+    executable_path="./spiders/chromedriver/chromedriver_linux", chrome_options=chrome_options)
+# driver = webdriver.Chrome(
+#     executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
 
 # 屏蔽 https 证书报警信息
 urllib3.disable_warnings()
@@ -259,6 +261,7 @@ def crawl(total, conn):
                 if len(comments) > 0:
                     # 热点评论存入数据库
                     conn.test.weiboHotComment.insert_many(comments)
+                print(count)
     except Exception as e:
         print(repr(e))
     finally:
@@ -272,11 +275,11 @@ def crawl(total, conn):
     return
 
 
-def main():
+def main(total):
     db = DBConn()
     db.connect()
     conn = db.get_conn()
-    crawl(100, conn)
+    crawl(total, conn)
 
 
 if __name__ == '__main__':
