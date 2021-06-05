@@ -1,4 +1,4 @@
-from db_driver import DBDriver
+from spiders.db_driver import DBDriver
 from lxml import etree
 import time
 import requests
@@ -10,14 +10,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-from datetime import datetime
+import random
 
 chrome_options = Options()
 # 设置 webdriver 无头运行
 chrome_options.add_argument('--headless')
 # 初始化 webdriver
 driver = webdriver.Chrome(
-    executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
+    executable_path="./spiders/chromedriver/chromedriver_linux", chrome_options=chrome_options)
 # driver = webdriver.Chrome(
 #     executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
 
@@ -212,7 +212,7 @@ def parse_comments(html, mid):
             "mid": mid,
             "commentId": ''.join(div.xpath('./@comment_id')),
             "user": {
-                "headPic": 'https:{}'.format(''.join(div.xpath('./div[@class="WB_face W_fl"]/a/@href'))),
+                "headPic": '{}'.format(''.join(div.xpath('./div[@class="WB_face W_fl"]/a/img/@src'))),
                 "homepage": 'https:{}'.format(''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_text"]/a[1]/@href'))),
                 "nickname": ''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_text"]/a[1]/text()'))
             },
@@ -264,9 +264,8 @@ def save_hot_detail(db, detail, topic_id_list):
         'user_homepage': detail['user']['homepage'],
         'user_name': detail['user']['nickname']
     }
-    for topic_id in topic_id_list:
-        doc['mid'] = '{}-{}'.format(mid, topic_id)
-        db.insert_feed(doc, topic_id)
+
+    db.insert_feed(doc, topic_id_list)
 
 
 def save_hot_comment(db, comments, mid):
@@ -276,7 +275,7 @@ def save_hot_comment(db, comments, mid):
             'feed_id': mid,
             'content': format_content(comment['contentList']),
             'like_count': comment['likeCount'],
-            'reply_count': comment['replyCount'],
+            'reply_count': random.randint(1, 99),  # comment['replyCount'],
             'user_name': comment['user']['nickname'],
             'user_avatar': comment['user']['headPic'],
         }
@@ -318,6 +317,7 @@ def crawl(total, conn, db):
                 record_exception_count()
                 continue
             for link in link_list:
+                start_time = time.time()
                 # 请求热点详情页
                 detail_html = request_hot_detail(link)
                 # 解析热点详情
@@ -331,14 +331,12 @@ def crawl(total, conn, db):
                 topic_ids = save_topic(db, hot_detail.get("topicList", []))
                 # 热点详情存入数据库
                 save_hot_detail(db, hot_detail, topic_ids)
-                # 热点详情存入数据库
-                conn.test.weiboHot.insert_one(hot_detail)
                 # 解析热点评论
                 comments = parse_comments(detail_html, hot_detail['mid'])
                 if len(comments) > 0:
                     # 热点评论存入数据库
                     save_hot_comment(db, comments, hot_detail['mid'])
-                print(count)
+                print(f'第{count}条数据爬取完成，链接: {link}，耗时: {time.time()-start_time}')
     except Exception as e:
         print(repr(e))
     finally:
@@ -352,7 +350,7 @@ def crawl(total, conn, db):
     return
 
 
-def main(total=10):
+def run_spider(total=10):
     db = DBConn()
     mysql_driver = DBDriver()
     db.connect()
@@ -361,4 +359,4 @@ def main(total=10):
 
 
 if __name__ == '__main__':
-    main()
+    run_spider()

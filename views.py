@@ -1,9 +1,12 @@
+import random
 from flask.json import jsonify
 from flask.templating import render_template
 from flask import Blueprint, request
 from werkzeug.utils import redirect
 from models import Topic, Feed, Comment
 from db_init import db
+from spiders import weibo_hot
+from threading import Thread
 
 import jieba
 
@@ -23,7 +26,7 @@ def show_page():
     '''
     测试返回页面
     '''
-    topic_list = Topic.query.order_by(Topic.hot).all()
+    topic_list = Topic.query.order_by(Topic.hot).limit(8).all()
     topic_list = [dict(topic) for topic in topic_list]
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 5))
@@ -85,47 +88,68 @@ def add_test_data():
 
 
 @weibo.route('/search', methods=['GET'])
-def search_feed():
+def feed_page_filter_by_keyword():
     '''
-    TODO: use Jieba to split words, and search it by sql statement with "like".
+    use Jieba to split words, and search it by sql statement with "like".
     '''
     key_string = request.args.get('search_str')
-    print(key_string)
+    exclude = bool(request.args.get('exclude'))
     if not key_string.split():
         return redirect('/')
 
     keywords = jieba.cut(key_string, cut_all=True)
 
     pre_sql_string = '''select id from topic where '''
+    words = []
     word_split_string = []
     for word in keywords:
-        word_split_string.append(f'''name like '%{word}%' ''')
-    key_sql_string = ' or '.join(word_split_string)
+        if exclude:
+            word_split_string.append(f'''name not like '%{word}%' ''')
+        else:
+            words.append(word)
+            word_split_string.append(f'''name like '%{word}%' ''')
+    if exclude:
+        key_sql_string = ' and '.join(word_split_string)
+    else:
+        key_sql_string = ' or '.join(word_split_string)
     sql_string = pre_sql_string + key_sql_string + ';'
 
     res = db.session.execute(sql_string)
 
     topic_id_list = [t[0] for t in res]
 
-    feed_list = [dict(feed) for feed in Feed.query.filter(
-        Feed.topic_id.in_(topic_id_list)).all()]
+    feed_id_list = []
+    feed_list = []
+    for topic in Topic.query.filter(Topic.id.in_(topic_id_list)).all():
+        for feed in topic.feeds:
+            if feed.mid not in feed_id_list:
+                feed_id_list.append(feed.mid)
+                feed_list.append(feed)
 
-    topic_list = Topic.query.order_by(Topic.hot).all()
+    topic_list = Topic.query.order_by(Topic.hot).limit(8).all()
     topic_list = [dict(topic) for topic in topic_list]
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 5))
     feed_count = len(feed_list)
     total = feed_count//page_size if feed_count//page_size == 0 else feed_count//page_size+1
 
-    return render_template('index.html', topic_list=topic_list, feed_list=feed_list[(page-1)*page_size:page*page_size], page=page, total=total)
+    return render_template('index.html',
+                           topic_list=topic_list,
+                           feed_list=feed_list[(
+                               page-1)*page_size:page*page_size],
+                           page=page,
+                           words=words,
+                           total=total)
 
 
 @weibo.route('/api/update_crawl_data', methods=['GET'])
 def update_crawl_data():
-    from spiders import weibo_hot
-    from threading import Thread
+    '''
+    开启一个线程启动爬虫程序
+    '''
+    crawl_number = random.randint(30, 50)
 
-    job = Thread(target=weibo_hot.main, args=(50,))
+    job = Thread(target=weibo_hot.run_spider, args=(crawl_number,))
 
     job.start()
     return jsonify({'msg': 'OK'})
@@ -133,10 +157,38 @@ def update_crawl_data():
 
 @weibo.route('/feed', methods=['GET'])
 def feed_page():
+    '''
+    微博正文详情页面
+    '''
     mid = request.args.get('mid')
-    topic_list = Topic.query.order_by(Topic.hot).all()
+    topic_list = Topic.query.order_by(Topic.hot).limit(8).all()
     topic_list = [dict(topic) for topic in topic_list]
 
     feed = Feed.query.filter_by(mid=mid).first()
     comment_list = [dict(comment) for comment in feed.comments]
     return render_template('post.html', feed=dict(feed), comment_list=comment_list, topic_list=topic_list)
+
+
+@weibo.route('/topic', methods=['GET'])
+def feed_page_filter_by_topic():
+    '''
+    按话题过滤feed
+    '''
+    topic_list = Topic.query.order_by(Topic.hot).limit(8).all()
+    topic_list = [dict(topic) for topic in topic_list]
+
+    topic_id = request.args.get('topic')
+    topic_obj = Topic.query.filter_by(id=int(topic_id)).first()
+
+    feed_list = [dict(feed) for feed in topic_obj.feeds]
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 5))
+    feed_count = len(feed_list)
+    total = feed_count//page_size if feed_count//page_size == 0 else feed_count//page_size+1
+
+    return render_template('index.html',
+                           topic_list=topic_list,
+                           feed_list=feed_list[(
+                               page-1)*page_size:page*page_size],
+                           page=page,
+                           total=total)

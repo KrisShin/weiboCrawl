@@ -1,5 +1,5 @@
-from enum import unique
 from db_init import db
+import json
 
 rs_topic_feed = db.Table('rs_topic_feed',
                 db.Column('topic_id', db.Integer, db.ForeignKey(
@@ -22,9 +22,7 @@ class Topic(db.Model):
 class Feed(db.Model):
     __tabelname__ = 'feed'
     mid = db.Column(db.String(32), primary_key=True)  # 唯一主键
-
-    topics = db.relationship('Topic', secondary=rs_topic_feed, lazy='subquery',
-                           backref=db.backref('feeds', lazy=True))  # 标签(口味偏好) n:n
+    topics = db.relationship('Topic', secondary=rs_topic_feed, lazy='subquery', backref=db.backref('feeds', lazy=True)) 
     content = db.Column(db.Text)  # 正文
     user_avatar = db.Column(db.String(1024))  # 用户头像
     user_name = db.Column(db.String(256))  # 用户名
@@ -41,22 +39,31 @@ class Feed(db.Model):
     topic_list = db.Column(db.String(1024))  # 关联topic
 
     def keys(self):
-        return ('mid',
-                'topic',
-                'content',
-                'user_avatar',
-                'user_name',
-                'forward_count',
-                'comment_count',
-                'like_count',
-                'image_list',
-                'video_list')
+        return (
+            'mid',
+            'topics',
+            'content',
+            'user_avatar',
+            'user_name',
+            'publish_time',
+            'link',
+            'from_dev',
+            'at_names',
+            'forward_count',
+            'comment_count',
+            'like_count',
+            'user_homepage',
+            'image_list',
+            'video_list',
+            'topic_list',)
 
     def __getitem__(self, item):
         if item == 'topic':
             return [topic.name for topic in self.topics]
         elif item == 'publish_time':
             return getattr(self, item)[:19] if getattr(self, item) else getattr(self, item)
+        # elif item in ('image_list', 'video_list', 'topic_list'):
+        #     return json.loads(getattr(self, item))
         return getattr(self, item)
 
 
@@ -85,6 +92,4 @@ class Comment(db.Model):
             'reply_count')
 
     def __getitem__(self, item):
-        if item in ('publish_time', 'reply_time'):
-            return getattr(self, item)[:19] if getattr(self, item) else getattr(self, item)
         return getattr(self, item)

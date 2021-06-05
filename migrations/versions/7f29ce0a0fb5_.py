@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 1d8e939bef9e
+Revision ID: 7f29ce0a0fb5
 Revises: 
-Create Date: 2021-06-05 23:32:04.554051
+Create Date: 2021-06-06 00:58:43.752344
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '1d8e939bef9e'
+revision = '7f29ce0a0fb5'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -50,12 +50,7 @@ def upgrade():
     sa.Column('user_name', sa.String(length=256), nullable=True),
     sa.Column('content', sa.Text(), nullable=True),
     sa.Column('image', sa.String(length=1024), nullable=True),
-    sa.Column('publish_time', sa.String(length=256), nullable=True),
     sa.Column('like_count', sa.Integer(), nullable=True),
-    sa.Column('reply_name', sa.String(length=256), nullable=True),
-    sa.Column('reply_content', sa.Text(), nullable=True),
-    sa.Column('reply_time', sa.String(length=256), nullable=True),
-    sa.Column('reply_like', sa.Integer(), nullable=True),
     sa.Column('reply_count', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['feed_id'], ['feed.mid'], ),
     sa.PrimaryKeyConstraint('id')
