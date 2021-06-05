@@ -26,11 +26,16 @@ class Feed(db.Model):
     user_avatar = db.Column(db.String(1024))  # 用户头像
     user_name = db.Column(db.String(256))  # 用户名
     publish_time = db.Column(db.String(256))  # 发布时间
+    link = db.Column(db.String(1024))  # 
+    from_dev = db.Column(db.String(1024))  # 来自xxx
+    at_names = db.Column(db.JSON)  # @的人
     forward_count = db.Column(db.Integer)  # 转发数量
     comment_count = db.Column(db.Integer)  # 评论数量
     like_count = db.Column(db.Integer)  # 点赞数量
+    user_homepage = db.Column(db.String(1024))  # 用户主页链接
     image_list = db.Column(db.JSON)  # 图片列表
     vedio_list = db.Column(db.JSON)  # 视频列表
+    topic_list = db.Column(db.String(1024))  # 关联topic
 
     def keys(self):
         return ('mid',

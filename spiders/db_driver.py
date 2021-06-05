@@ -1,4 +1,5 @@
 import pymysql
+import json
 
 
 class DBDriver(object):
@@ -54,7 +55,7 @@ class DBDriver(object):
     def insert_feed(self, feed: dict):
         keys = ','.join(feed.keys())
         values = ','.join(
-            [str(v) if isinstance(v, int) else f"'{v}'" for v in feed.values()])
+            [f"'{v}'" if isinstance(v, str) else json.dumps(v) for v in feed.values()])
 
         sql_string = f"replace into feed({keys}) values({values});"
         with self.db.cursor() as cursor:
@@ -71,7 +72,7 @@ class DBDriver(object):
     def insert_comment(self, comment: dict):
         keys = ','.join(comment.keys())
         values = ','.join(
-            [str(v) if isinstance(v, int) else f"'{v}'" for v in comment.values()])
+            [f"'{v}'" if isinstance(v, str) else json.dumps(v) for v in comment.values()])
 
         sql_string = f"replace into comment({keys}) values({values});"
         with self.db.cursor() as cursor:
