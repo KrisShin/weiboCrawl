@@ -221,8 +221,63 @@ def parse_comments(html, mid):
     return result
 
 
+def save_topic(db, topic_list):
+    topic_id_list = []
+    for topic in topic_list:
+        ''.strip(' \n\r')
+        topic = topic..strip(' \n\r')
+        if topic == "":
+            continue
+        t_id = db.insert_topic({'name': topic})
+        topic_id_list.append(t_id)
+    return topic_id_list
+
+
+def format_str_list(origin):
+    result = ''
+    for s in origin:
+        result = '{}|{}'.format(result, s)
+    return result
+
+
+def save_hot_detail(db, detail, topic_id_list):
+    mid = detail['mid']
+    content = format_content(detail['contentList'])
+    doc = {
+        'mid': detail['mid'],
+        'topic_id': 'topic_id',
+        'content': '',
+        'forward_count': detail['shareCount'],
+        'comment_count': detail['commentCount'],
+        'like_count': detail['likeCount'],
+        'publish_time': detail['publishTime'],
+        'link': detail['link'],
+        'from': detail['from'],
+        'at_names': format_str_list(detail['atNameList']),
+        'image_list': format_str_list(detail['imageList']),
+        'video_list': format_str_list(detail['videoList']),
+        'topic_list': format_str_list(detail['topicList']),
+        'user_head_pic': detail['user']['headPic'],
+        'user_homepage': detail['user']['homepage'],
+        'user_nickname': detail['user']['nickname']
+    }
+    for topic_id in topic_id_list:
+        doc['mid'] = '{}-{}'.format(mid, topic_id)
+        doc['topic_id'] = topic_id
+        doc['content'] = f'feed {content} for topic {topic_id}'
+        db.insert_feed(doc)
+
+
+def format_content(content_list):
+    result = ""
+    for content in content_list:
+        content = content.strip(' ')
+        result = '{}{}'.format(result, content)
+    return result
+
+
 # 开始抓取
-def crawl(total, conn):
+def crawl(total, conn, db):
     count = 0
     page = 1
 
@@ -254,6 +309,8 @@ def crawl(total, conn):
                     record_exception_count()
                     continue
                 count += 1
+                # 热点话题存入数据库
+                topic_ids = save_topic(db, hot_detail.get("topicList", []))
                 # 热点详情存入数据库
                 conn.test.weiboHot.insert_one(hot_detail)
                 # 解析热点评论
