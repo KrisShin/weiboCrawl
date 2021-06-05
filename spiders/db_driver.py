@@ -31,7 +31,9 @@ class DBDriver(object):
                 try:
                     cursor.execute(
                         f'''update topic set hot={hot+1} where id = {id};''')
+                    last_id = cursor.lastrowid
                     self.db.commit()
+                    return last_id
                 except Exception as err:
                     self.db.rollback()
                     print(err)
@@ -40,11 +42,14 @@ class DBDriver(object):
                 try:
                     cursor.execute(
                         f'''insert into topic(name, hot) values('{topic["name"]}',1);''')
+                    last_id = cursor.lastrowid
                     self.db.commit()
+                    return last_id
                 except Exception as err:
                     self.db.rollback()
                     print(err)
                     raise Exception('insert topic failed.')
+            
 
     def insert_feed(self, feed: dict):
         keys = ','.join(feed.keys())
@@ -55,7 +60,9 @@ class DBDriver(object):
         with self.db.cursor() as cursor:
             try:
                 cursor.execute(sql_string)
+                last_id = cursor.lastrowid
                 self.db.commit()
+                return last_id
             except Exception as err:
                 self.db.rollback()
                 print(err)
@@ -70,7 +77,9 @@ class DBDriver(object):
         with self.db.cursor() as cursor:
             try:
                 cursor.execute(sql_string)
+                last_id = cursor.lastrowid
                 self.db.commit()
+                return last_id
             except Exception as err:
                 self.db.rollback()
                 print(err)
