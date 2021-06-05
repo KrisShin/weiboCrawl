@@ -52,27 +52,42 @@ class DBDriver(object):
                     raise Exception('insert topic failed.')
             
 
-    def insert_feed(self, feed: dict):
+    def insert_feed(self, feed: dict, topic_id):
         keys = ','.join(feed.keys())
-        values = ','.join(
-            [f"'{v}'" if isinstance(v, str) else json.dumps(v) for v in feed.values()])
+        values = []
+        for val in feed.values():
+            if isinstance(val, str):
+                values.append(rf"'{val}'")
+            elif isinstance(val, list) or isinstance(val,dict):
+                values.append(r"'{}'".format(str(val).replace("'",'"')))
+            elif isinstance(val, int):
+                values.append(str(val))
+            else:
+                raise Exception('unsupport data type', type(val), val)
 
-        sql_string = f"replace into feed({keys}) values({values});"
+        sql_string = f"""replace into feed({keys}) values({','.join(values)});"""
+        sql_string_relationship = f"""replace into rs_topic_feed(topic_id, feed_mid) VALUES('{topic_id}','{feed["mid"]}');"""
         with self.db.cursor() as cursor:
+            last_id = None
             try:
                 cursor.execute(sql_string)
                 last_id = cursor.lastrowid
                 self.db.commit()
-                return last_id
             except Exception as err:
                 self.db.rollback()
                 print(err)
                 raise Exception('insert feed failed')
+            try:
+                cursor.execute(sql_string_relationship)
+                self.db.commit()
+            except Exception:
+                pass
+            return last_id
 
     def insert_comment(self, comment: dict):
         keys = ','.join(comment.keys())
         values = ','.join(
-            [f"'{v}'" if isinstance(v, str) else json.dumps(v) for v in comment.values()])
+            [f"'{v}'" if isinstance(v, str) else str(v) for v in comment.values()])
 
         sql_string = f"replace into comment({keys}) values({values});"
         with self.db.cursor() as cursor:

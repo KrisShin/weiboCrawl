@@ -93,7 +93,7 @@ CREATE TABLE `feed` (
   `comment_count` int DEFAULT NULL,
   `like_count` int DEFAULT NULL,
   `image_list` json DEFAULT NULL,
-  `vedio_list` json DEFAULT NULL,
+  `video_list` json DEFAULT NULL,
   PRIMARY KEY (`mid`),
   KEY `topic_id` (`topic_id`),
   CONSTRAINT `feed_ibfk_1` FOREIGN KEY (`topic_id`) REFERENCES `topic` (`id`)

@@ -247,7 +247,6 @@ def save_hot_detail(db, detail, topic_id_list):
     
     doc = {
         'mid': detail['mid'],
-        'topic_id': 'topic_id',
         'content': content,
         'forward_count': detail['shareCount'],
         'comment_count': detail['commentCount'],
@@ -265,8 +264,7 @@ def save_hot_detail(db, detail, topic_id_list):
     }
     for topic_id in topic_id_list:
         doc['mid'] = '{}-{}'.format(mid, topic_id)
-        doc['topic_id'] = topic_id
-        db.insert_feed(doc)
+        db.insert_feed(doc, topic_id)
 
 
 def format_content(content_list):

@@ -1,6 +1,10 @@
 from enum import unique
 from db_init import db
 
+rs_topic_feed = db.Table('rs_topic_feed',
+                db.Column('topic_id', db.Integer, db.ForeignKey(
+                    'topic.id'), primary_key=True),
+                db.Column('feed_mid', db.String(32), db.ForeignKey('feed.mid'), primary_key=True))
 
 class Topic(db.Model):
     __tablename__ = 'topic'
@@ -19,9 +23,8 @@ class Feed(db.Model):
     __tabelname__ = 'feed'
     mid = db.Column(db.String(32), primary_key=True)  # 唯一主键
 
-    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'))  # 关联话题的id
-    topic = db.relationship(
-        'Topic', backref=db.backref('feeds', lazy='dynamic'))  # 外键，关联到topic
+    topics = db.relationship('Topic', secondary=rs_topic_feed, lazy='subquery',
+                           backref=db.backref('feeds', lazy=True))  # 标签(口味偏好) n:n
     content = db.Column(db.Text)  # 正文
     user_avatar = db.Column(db.String(1024))  # 用户头像
     user_name = db.Column(db.String(256))  # 用户名
@@ -34,12 +37,11 @@ class Feed(db.Model):
     like_count = db.Column(db.Integer)  # 点赞数量
     user_homepage = db.Column(db.String(1024))  # 用户主页链接
     image_list = db.Column(db.JSON)  # 图片列表
-    vedio_list = db.Column(db.JSON)  # 视频列表
+    video_list = db.Column(db.JSON)  # 视频列表
     topic_list = db.Column(db.String(1024))  # 关联topic
 
     def keys(self):
         return ('mid',
-                'topic_id',
                 'topic',
                 'content',
                 'user_avatar',
@@ -49,11 +51,11 @@ class Feed(db.Model):
                 'comment_count',
                 'like_count',
                 'image_list',
-                'vedio_list')
+                'video_list')
 
     def __getitem__(self, item):
         if item == 'topic':
-            return self.topic.name
+            return [topic.name for topic in self.topics]
         elif item == 'publish_time':
             return getattr(self, item)[:19] if getattr(self, item) else getattr(self, item)
         return getattr(self, item)
