@@ -1,4 +1,4 @@
-from spiders.db_driver import DBDriver
+from db_driver import DBDriver
 from lxml import etree
 import time
 import requests
@@ -10,13 +10,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from datetime import datetime
 
 chrome_options = Options()
 # 设置 webdriver 无头运行
 chrome_options.add_argument('--headless')
 # 初始化 webdriver
 driver = webdriver.Chrome(
-    executable_path="./spiders/chromedriver/chromedriver_linux", chrome_options=chrome_options)
+    executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
 # driver = webdriver.Chrome(
 #     executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
 
@@ -216,7 +217,8 @@ def parse_comments(html, mid):
                 "nickname": ''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_text"]/a[1]/text()'))
             },
             "contentList": div.xpath('./div[@class="list_con"]/div[@class="WB_text"]/text()'),
-            "likeCount": format_number(''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_func clearfix"]//span[@node-type="like_status"]/em[2]/text()')))
+            "likeCount": format_number(''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_func clearfix"]//span[@node-type="like_status"]/em[2]/text()'))),
+            "replyCount": format_number(''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_func clearfix"]//span[@node-type="like_status"]/em[2]/text()')))
         }
         result.append(comment_detail)
     return result
@@ -244,7 +246,7 @@ def format_str_list(origin):
 def save_hot_detail(db, detail, topic_id_list):
     mid = detail['mid']
     content = format_content(detail['contentList'])
-    
+
     doc = {
         'mid': detail['mid'],
         'topic_id': 'topic_id',
@@ -267,6 +269,23 @@ def save_hot_detail(db, detail, topic_id_list):
         doc['mid'] = '{}-{}'.format(mid, topic_id)
         doc['topic_id'] = topic_id
         db.insert_feed(doc)
+
+
+def save_hot_comment(db, comments, mid):
+    for comment in comments:
+        doc = {
+            'id': comment['commentId'],
+            'feed_id': mid,
+            'content': format_content(comment['contentList']),
+            'like_count': comment['likeCount'],
+            'reply_count': comment['replyCount'],
+            'user_name': comment['user']['nickname'],
+            'user_avatar': comment['user']['headPic'],
+        }
+        try:
+            db.insert_comment(doc)
+        except:
+            pass
 
 
 def format_content(content_list):
@@ -312,15 +331,15 @@ def crawl(total, conn, db):
                 count += 1
                 # 热点话题存入数据库
                 topic_ids = save_topic(db, hot_detail.get("topicList", []))
-
-                save_hot_detail(db,hot_detail, topic_ids)
+                # 热点详情存入数据库
+                save_hot_detail(db, hot_detail, topic_ids)
                 # 热点详情存入数据库
                 conn.test.weiboHot.insert_one(hot_detail)
                 # 解析热点评论
                 comments = parse_comments(detail_html, hot_detail['mid'])
                 if len(comments) > 0:
                     # 热点评论存入数据库
-                    conn.test.weiboHotComment.insert_many(comments)
+                    save_hot_comment(db, comments, hot_detail['mid'])
                 print(count)
     except Exception as e:
         print(repr(e))
@@ -335,7 +354,7 @@ def crawl(total, conn, db):
     return
 
 
-def main(total):
+def main(total=10):
     db = DBConn()
     mysql_driver = DBDriver()
     db.connect()

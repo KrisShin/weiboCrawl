@@ -26,7 +26,7 @@ class Feed(db.Model):
     user_avatar = db.Column(db.String(1024))  # 用户头像
     user_name = db.Column(db.String(256))  # 用户名
     publish_time = db.Column(db.String(256))  # 发布时间
-    link = db.Column(db.String(1024))  # 
+    link = db.Column(db.String(1024))  #
     from_dev = db.Column(db.String(1024))  # 来自xxx
     at_names = db.Column(db.JSON)  # @的人
     forward_count = db.Column(db.Integer)  # 转发数量
@@ -44,7 +44,6 @@ class Feed(db.Model):
                 'content',
                 'user_avatar',
                 'user_name',
-                'publish_time',
                 'forward_count',
                 'comment_count',
                 'like_count',
@@ -69,12 +68,7 @@ class Comment(db.Model):
     user_name = db.Column(db.String(256))  # 评论用户名
     content = db.Column(db.Text)  # 评论内容
     image = db.Column(db.String(1024))  # 评论图片
-    publish_time = db.Column(db.String(256))  # 发布时间
     like_count = db.Column(db.Integer)  # 点赞数量
-    reply_name = db.Column(db.String(256))  # 回复用户名
-    reply_content = db.Column(db.Text)  # 回复内容
-    reply_time = db.Column(db.String(256))  # 回复时间
-    reply_like = db.Column(db.Integer)  # 回复点赞数
     reply_count = db.Column(db.Integer)  # 回复数量
 
     def keys(self):
@@ -85,12 +79,7 @@ class Comment(db.Model):
             'user_name',
             'content',
             'image',
-            'publish_time',
             'like_count',
-            'reply_name',
-            'reply_content',
-            'reply_time',
-            'reply_like',
             'reply_count')
 
     def __getitem__(self, item):

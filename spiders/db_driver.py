@@ -50,7 +50,6 @@ class DBDriver(object):
                     self.db.rollback()
                     print(err)
                     raise Exception('insert topic failed.')
-            
 
     def insert_feed(self, feed: dict):
         keys = ','.join(feed.keys())
@@ -110,9 +109,9 @@ if __name__ == "__main__":
             )
             for c_id in range(3):
                 db.insert_comment({
-                    'id':str(randint(1000, 9999)),
+                    'id': str(randint(1000, 9999)),
                     'feed_id': f_id,
-                    'content':f'comment {c_id} of feed {f_id}',
+                    'content': f'comment {c_id} of feed {f_id}',
                     'publish_time': datetime.now(),
                     'like_count': randint(99, 999),
                     'reply_count': randint(99, 999),
