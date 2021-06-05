@@ -33,7 +33,7 @@ class Feed(db.Model):
     vedio_list = db.Column(db.JSON)  # 视频列表
 
     def keys(self):
-        return ('id',
+        return ('mid',
                 'topic_id',
                 'topic',
                 'content',
@@ -49,6 +49,8 @@ class Feed(db.Model):
     def __getitem__(self, item):
         if item == 'topic':
             return self.topic.name
+        elif item == 'publish_time':
+            return getattr(self, item)[:19] if getattr(self, item) else getattr(self, item)
         return getattr(self, item)
 
 
@@ -87,4 +89,6 @@ class Comment(db.Model):
             'reply_count')
 
     def __getitem__(self, item):
+        if item in ('publish_time', 'reply_time'):
+            return getattr(self, item)[:19] if getattr(self, item) else getattr(self, item)
         return getattr(self, item)

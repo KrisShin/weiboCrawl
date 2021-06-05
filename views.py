@@ -1,8 +1,11 @@
 from flask.json import jsonify
 from flask.templating import render_template
-from flask import Blueprint
+from flask import Blueprint, request
+from werkzeug.utils import redirect
 from models import Topic, Feed, Comment
 from db_init import db
+
+import jieba
 
 weibo = Blueprint('weibo', __name__, template_folder='templates')
 
@@ -20,7 +23,17 @@ def show_page():
     '''
     测试返回页面
     '''
-    return render_template('index.html')
+    topic_list = Topic.query.order_by(Topic.hot).all()
+    topic_list = [dict(topic) for topic in topic_list]
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 5))
+
+    feed_list = Feed.query
+    total = feed_list.count(
+    )//page_size if feed_list.count() % page_size == 0 else feed_list.count()//page_size+1
+    feed_list = feed_list.offset(page*page_size).limit(page_size)
+    feed_list = [dict(feed) for feed in feed_list]
+    return render_template('index.html', topic_list=topic_list, feed_list=feed_list, total=total, page=page)
 
 
 @weibo.route('/all_topic', methods=['GET'])
@@ -28,13 +41,6 @@ def api_get_all_topic():
     topic_list = Topic.query.order_by(Topic.hot).all()
     topic_list = [dict(topic) for topic in topic_list]
     return jsonify(topic_list)
-
-
-@weibo.route('/all_feed', methods=['GET'])
-def api_get_all_feed():
-    feed_list = Feed.query.all()
-    feed_list = [dict(feed) for feed in feed_list]
-    return jsonify(feed_list)
 
 
 @weibo.route('/all_comment', methods=['GET'])
@@ -78,42 +84,40 @@ def add_test_data():
     return jsonify({'msg': 'ok'})
 
 
-def migrate_mongo_to_mysql():
-    '''
-    TODO:
-    {
-        "_id" : ObjectId("60b909f0c2a19ae3fae062ee"),
-        "mid" : "4643945000996897",
-        "link" : "https://weibo.com/1792951112/Kird24bkZ",
-        "publishTime" : "2021-06-03 10:10",
-        "from" : "微博视频号",
-        "topicList" : [ 
-            "#自信绽放 笑着见#"
-        ],
-        "contentList" : [ 
-            "\n                                                                                                                        用自然美学与动人科技结合的", 
-            " 守护你的自信笑容，从今天开始", 
-            "。", 
-            " ​​​​                                            "
-        ],
-        "shareCount" : "100万+",
-        "commentCount" : "100万+",
-        "likeCount" : "4613862",
-        "user" : {
-            "headPic" : "https://tvax2.sinaimg.cn/crop.261.201.600.600.1024/6ade4348ly8ge5avdm8jbj20u00u075k.jpg?KID=imgbed,tva&Expires=1622750234&ssig=Wwg6CwayR9",
-            "nickname" : "X玖少年团肖战DAYTOY",
-            "homepage" : "https://weibo.com/xiaozhan1"
-        }
-    }
-    '''
-    pass
-
-
+@weibo.route('/search', methods=['GET'])
 def search_feed():
     '''
     TODO: use Jieba to split words, and search it by sql statement with "like".
     '''
-    pass
+    key_string = request.args.get('search_str')
+    print(key_string)
+    if not key_string.split():
+        return redirect('/')
+
+    keywords = jieba.cut(key_string, cut_all=True)
+
+    pre_sql_string = '''select id from topic where '''
+    word_split_string = []
+    for word in keywords:
+        word_split_string.append(f'''name like '%{word}%' ''')
+    key_sql_string = ' or '.join(word_split_string)
+    sql_string = pre_sql_string + key_sql_string + ';'
+
+    res = db.session.execute(sql_string)
+
+    topic_id_list = [t[0] for t in res]
+
+    feed_list = [dict(feed) for feed in Feed.query.filter(
+        Feed.topic_id.in_(topic_id_list)).all()]
+
+    topic_list = Topic.query.order_by(Topic.hot).all()
+    topic_list = [dict(topic) for topic in topic_list]
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 5))
+    feed_count = len(feed_list)
+    total = feed_count//page_size if feed_count//page_size == 0 else feed_count//page_size+1
+
+    return render_template('index.html', topic_list=topic_list, feed_list=feed_list[(page-1)*page_size:page*page_size], page=page, total=total)
 
 
 @weibo.route('/api/update_crawl_data', methods=['GET'])
@@ -124,7 +128,15 @@ def update_crawl_data():
     job = Thread(target=weibo_hot.main, args=(50,))
 
     job.start()
-    return jsonify({'msg':'OK'})
-    
+    return jsonify({'msg': 'OK'})
 
-    
+
+@weibo.route('/feed', methods=['GET'])
+def feed_page():
+    mid = request.args.get('mid')
+    topic_list = Topic.query.order_by(Topic.hot).all()
+    topic_list = [dict(topic) for topic in topic_list]
+
+    feed = Feed.query.filter_by(mid=mid).first()
+    comment_list = [dict(comment) for comment in feed.comments]
+    return render_template('post.html', feed=dict(feed), comment_list=comment_list, topic_list=topic_list)
