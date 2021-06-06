@@ -64,7 +64,14 @@ class DBDriver(object):
             else:
                 raise Exception('unsupport data type', type(val), val)
 
-        sql_string = f"""insert ignore into feed({keys}) values({','.join(values)});"""
+        update_keys = []
+        for key in feed.keys():
+            if key=='mid':
+                continue
+            update_keys.append(f"""{key}=VALUES({key})""")
+
+        # sql_string = f"""insert ignore into feed() values({','.join(values)});"""
+        sql_string = f"""INSERT INTO feed({keys}) values({','.join(values)}) ON DUPLICATE KEY UPDATE {','.join(update_keys)};"""
         with self.db.cursor() as cursor:
             last_id = None
             try:
@@ -90,8 +97,15 @@ class DBDriver(object):
         keys = ','.join(comment.keys())
         values = ','.join(
             [f"'{v}'" if isinstance(v, str) else str(v) for v in comment.values()])
+        
+        update_keys = []
+        for key in comment.keys():
+            if key=='id':
+                continue
+            update_keys.append(f"""{key}=VALUES({key})""")
 
-        sql_string = f"insert ignore into comment({keys}) values({values});"
+        # sql_string = f"insert ignore into comment({keys}) values({values});"
+        sql_string = f"""INSERT INTO comment({keys}) values({values}) ON DUPLICATE KEY UPDATE {','.join(update_keys)};"""
         with self.db.cursor() as cursor:
             try:
                 cursor.execute(sql_string)

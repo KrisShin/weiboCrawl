@@ -12,6 +12,7 @@
   <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css" />
   <link rel="stylesheet" type="text/css" href="/static/css/materialdesignicons.min.css" />
+  <link rel="stylesheet" type="text/css" href="/static/js/highlight/styles/agate.css" />
   <link rel="stylesheet" type="text/css" href="/static/css/style.min.css" />
 </head>
 
@@ -80,19 +81,27 @@
             {% for feed in feed_list %}
             <article class="lyear-arc">
               <div class="arc-header">
-                <h2 class="arc-title"><a href="/feed?mid={{feed.mid}}">{{ feed.user_name }}</a></h2>
+                <h2 class="arc-title"><a href="/feed?mid={{feed.mid}}" style="display: flex;">{{ feed.user_name }}</a></h2>
                 {% for topic in feed.topics%}
                 <h6> <a href="/topic?topic={{topic.id}}">{{topic.name}}</a> </h6>
                 {% endfor %}
                 <ul class="arc-meta">
                   <li><i class="mdi mdi-calendar"></i> {{feed.publish_time}}</li>
-                  <!-- <li><i class="mdi mdi-tag-text-outline"></i> <a href="#">蔚来汽车</a>, <a href="#">财报</a></li> -->
+                  {% for at in feed.at_names %}
+                  <li> <a href="#">{{ at }}</a></li>
+                  {% endfor %}
+                  <li><i class="mdi mdi-thumb-up-outline"></i> <a href="#">{{feed.like_count}} 点赞</a></li>
                   <li><i class="mdi mdi-comment-multiple-outline"></i> <a href="#">{{feed.comment_count}} 评论</a></li>
+                  <li><i class="mdi mdi-share-outline"></i> <a href="#">{{feed.forward_count}} 转发</a></li>
+                  <li><i class="mdi mdi-video-outline"></i> <a href="#">来自{{feed.from_dev}}</a></li>
                 </ul>
               </div>
-
+              
               <div class="arc-synopsis">
-                <p>{{feed.content}}</p>
+                <p>{{feed.content[:100]}}...</p>
+                {% for img in feed.image_list %}
+                <img src="{{img}}" alt="" class="img-fluid rounded" />
+                {% endfor %}
               </div>
             </article>
             {% endfor %}
@@ -121,52 +130,7 @@
             <!-- 分页 end -->
           </div>
           <!-- 内容 end -->
-
-          <!-- 侧边栏 -->
-          <!-- <div class="col-xl-4">
-            <div class="lyear-sidebar">
-
-              <aside class="widget widget-hot-posts">
-                <div class="widget-title">热门文章</div>
-                <ul>
-                  <li>
-                    <a href="#">三星将为 Galaxy Fold 用户提供 149 美元更换屏幕服务</a> <span>2019-09-25 10:05</span>
-                  </li>
-                  <li>
-                    <a href="#">专家：10年后6G将问世 数据传输速率有望比5G快100倍</a> <span>2019-09-25 08:06</span>
-                  </li>
-                  <li>
-                    <a href="#">苹果正式发布 iPadOS 13.1 系统，加入多项强大新功能</a> <span>2019-09-25 09:35</span>
-                  </li>
-                </ul>
-              </aside>
-
-              <aside class="widget">
-                <div class="widget-title">归档</div>
-                <ul>
-                  <li><a href="#">2019 三月</a> (40)</li>
-                  <li><a href="#">2019 四月</a> (08)</li>
-                  <li><a href="#">2019 五月</a> (11)</li>
-                  <li><a href="#">2019 六月</a> (21)</li>
-                </ul>
-              </aside>
-
-              <aside class="widget widget-tag-cloud">
-                <div class="widget-title">标签</div>
-                <div class="tag-cloud">
-                  <a href="#" class="badge badge-light">php</a>
-                  <a href="#" class="badge badge-primary">苹果</a>
-                  <a href="#" class="badge badge-danger">比特币</a>
-                  <a href="#" class="badge badge-light">linux</a>
-                  <a href="#" class="badge badge-light">前端</a>
-                  <a href="#" class="badge badge-light">vue</a>
-                </div>
-              </aside>
-            </div>
-          </div> -->
-          <!-- 侧边栏 end -->
         </div>
-
       </div>
       <!-- end container -->
     </section>
