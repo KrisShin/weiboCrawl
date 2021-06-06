@@ -255,7 +255,7 @@ def save_hot_detail(db, detail, topic_id_list):
         'link': detail['link'],
         'from_dev': detail['from'],
         'at_names': [at['atName'] for at in detail['atNameList']],
-        'image_list': detail['imageList'],
+        'image_list': detail['imageList'][:-1],
         'video_list': detail['videoList'],
         'topic_list': detail['topicList'],
         'user_avatar': detail['user']['headPic'],

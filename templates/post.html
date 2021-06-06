@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="" />
   <meta name="keywords" content="" />
-  <meta name="author" content="yinqi" />
+  <meta name="referrer" content="never">
   <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico" />
   <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css" />
   <link rel="stylesheet" type="text/css" href="/static/css/materialdesignicons.min.css" />
@@ -57,7 +57,7 @@
           </div>
 
           <hr>
-          <h5 class="lyear-sentence mb-3">选择你想看的热门话题吧</h5>
+          <h5 class="lyear-sentence mb-3">请选择你想看的关键词吧</h5>
           <ul class="navbar-nav flex-column text-center">
             {% for topic in topic_list %}
             <li class="nav-item active">
@@ -96,7 +96,7 @@
               <div class="lyear-arc-detail">
                 <p>{{feed.content}}</p>
                 {% for img in feed.image_list %}
-                <img src="{{img}}" alt="" class="img-fluid rounded" />
+                <img src="{{img}}" alt="{{feed.user_name}}" class="img-fluid rounded w-500" />
                 {% endfor %}
                 <br>
                 {% for at in feed.at_names %}

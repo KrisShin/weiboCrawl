@@ -150,7 +150,8 @@ def update_crawl_data():
     '''
     开启一个线程启动爬虫程序
     '''
-    crawl_number = random.randint(30, 50)
+    # 爬取条数 随机80-100，不建议太多，数量太多或者爬虫太频繁可能触发微博反爬机制
+    crawl_number = random.randint(80, 100) 
 
     job = Thread(target=weibo_hot.run_spider, args=(crawl_number,))
 
