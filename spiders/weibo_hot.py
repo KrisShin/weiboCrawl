@@ -3,6 +3,7 @@ from lxml import etree
 import time
 import requests
 import json
+import re
 import pymongo
 import urllib3
 from selenium import webdriver
@@ -218,7 +219,7 @@ def parse_comments(html, mid):
             },
             "contentList": div.xpath('./div[@class="list_con"]/div[@class="WB_text"]/text()'),
             "likeCount": format_number(''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_func clearfix"]//span[@node-type="like_status"]/em[2]/text()'))),
-            "replyCount": format_number(''.join(div.xpath('./div[@class="list_con"]/div[@class="WB_func clearfix"]//span[@node-type="like_status"]/em[2]/text()')))
+            "replyCount":  format_number(''.join(re.findall(r'共(\d+)条回复', ''.join(div.xpath('.//div[@class="list_li_v2"]//a[@action-type="login"]/text()')))))
         }
         result.append(comment_detail)
     return result
@@ -244,12 +245,9 @@ def format_str_list(origin):
 
 
 def save_hot_detail(db, detail, topic_id_list):
-    mid = detail['mid']
-    content = format_content(detail['contentList'])
-
     doc = {
         'mid': detail['mid'],
-        'content': content,
+        'content': format_content(detail['contentList']),
         'forward_count': detail['shareCount'],
         'comment_count': detail['commentCount'],
         'like_count': detail['likeCount'],
@@ -264,7 +262,6 @@ def save_hot_detail(db, detail, topic_id_list):
         'user_homepage': detail['user']['homepage'],
         'user_name': detail['user']['nickname']
     }
-
     db.insert_feed(doc, topic_id_list)
 
 
@@ -275,7 +272,7 @@ def save_hot_comment(db, comments, mid):
             'feed_id': mid,
             'content': format_content(comment['contentList']),
             'like_count': comment['likeCount'],
-            'reply_count': random.randint(1, 99),  # comment['replyCount'],
+            'reply_count': comment['replyCount'],
             'user_name': comment['user']['nickname'],
             'user_avatar': comment['user']['headPic'],
         }
