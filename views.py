@@ -150,7 +150,7 @@ def update_crawl_data():
     '''
     开启一个线程启动爬虫程序
     '''
-    crawl_number = random.randint(30, 50)
+    crawl_number = 100  # random.randint(30, 50)
 
     job = Thread(target=weibo_hot.run_spider, args=(crawl_number,))
 
