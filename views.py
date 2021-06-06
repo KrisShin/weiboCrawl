@@ -24,9 +24,9 @@ def test_hello():
 @weibo.route('/', methods=['GET', 'POST'])
 def show_page():
     '''
-    测试返回页面
+    返回首页
     '''
-    topic_list = Topic.query.order_by(Topic.hot).limit(8).all()
+    topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
     topic_list = [dict(topic) for topic in topic_list]
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 5))
@@ -34,7 +34,7 @@ def show_page():
     feed_list = Feed.query
     total = feed_list.count(
     )//page_size if feed_list.count() % page_size == 0 else feed_list.count()//page_size+1
-    feed_list = feed_list.offset(page*page_size).limit(page_size)
+    feed_list = feed_list.order_by(Feed.publish_time.desc()).offset(page*page_size).limit(page_size)
     feed_list = [dict(feed) for feed in feed_list]
     return render_template('index.html', topic_list=topic_list, feed_list=feed_list, total=total, page=page)
 
@@ -126,10 +126,13 @@ def feed_page_filter_by_keyword():
                 feed_id_list.append(feed.mid)
                 feed_list.append(feed)
 
-    topic_list = Topic.query.order_by(Topic.hot).limit(8).all()
+    feed_list = sorted(feed_list, key=lambda feed:feed.publish_time)
+    feed_list.reverse()  # 将新发布的帖子排到前面
+
+    topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
     topic_list = [dict(topic) for topic in topic_list]
     page = int(request.args.get("page", 1))
-    page_size = int(request.args.get("page_size", 5))
+    page_size = int(request.args.get("page_size", 1000))
     feed_count = len(feed_list)
     total = feed_count//page_size if feed_count//page_size == 0 else feed_count//page_size+1
 
@@ -161,7 +164,7 @@ def feed_page():
     微博正文详情页面
     '''
     mid = request.args.get('mid')
-    topic_list = Topic.query.order_by(Topic.hot).limit(8).all()
+    topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
     topic_list = [dict(topic) for topic in topic_list]
 
     feed = Feed.query.filter_by(mid=mid).first()
@@ -174,7 +177,7 @@ def feed_page_filter_by_topic():
     '''
     按话题过滤feed
     '''
-    topic_list = Topic.query.order_by(Topic.hot).limit(8).all()
+    topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
     topic_list = [dict(topic) for topic in topic_list]
 
     topic_id = request.args.get('topic')
