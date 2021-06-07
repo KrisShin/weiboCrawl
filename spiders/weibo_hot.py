@@ -11,7 +11,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-import random
 
 chrome_options = Options()
 # 设置 webdriver 无头运行
@@ -228,7 +227,7 @@ def parse_comments(html, mid):
 def save_topic(db, topic_list):
     topic_id_list = []
     for topic in topic_list:
-        ''.strip(' \n\r')
+        # ''.strip(' \n\r')
         topic = topic.strip(' \n\r')
         if topic == "":
             continue
@@ -238,6 +237,7 @@ def save_topic(db, topic_list):
 
 
 def format_str_list(origin):
+    '''将列表拼接为字符串'''
     result = ''
     for s in origin:
         result = '{}|{}'.format(result, s)
@@ -255,7 +255,7 @@ def save_hot_detail(db, detail, topic_id_list):
         'link': detail['link'],
         'from_dev': detail['from'],
         'at_names': [at['atName'] for at in detail['atNameList']],
-        'image_list': detail['imageList'][:-1],
+        'image_list': detail['imageList'][:-1],  # 最后一张图片是用户头像, 所以排除掉
         'video_list': detail['videoList'],
         'topic_list': detail['topicList'],
         'user_avatar': detail['user']['headPic'],

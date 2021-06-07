@@ -14,7 +14,7 @@ requests = "*"
 jieba = "*"
 selenium = "*"
 lxml = "*"
-pymongo = "*"
+cryptography = "*"
 
 [dev-packages]
 autopep8 = "*"
