@@ -1,6 +1,4 @@
 import pymysql
-import json
-
 
 class DBDriver(object):
     '''
@@ -8,6 +6,9 @@ class DBDriver(object):
     '''
 
     def __init__(self) -> None:
+        '''
+        初始化数据库连接
+        '''
         super().__init__()
 
         self.db = pymysql.connect(
@@ -19,30 +20,33 @@ class DBDriver(object):
             charset='utf8mb4'
         )
 
-        self.cursor = self.db.cursor()
-
     def insert_topic(self, topic: dict):
-        '''insert topic if topic not exisit otherwise hot add 1.'''
+        '''如果topic不存在, 则插入一条新的topic, 存在则热度+1'''
+
         sql_string = f'''select id,hot from topic where name='{topic["name"]}';'''
         with self.db.cursor() as cursor:
+            # 搜索当前topic是否存在
             cursor.execute(sql_string)
             resp = cursor.fetchall()
             id, hot = resp[0] if resp else (None, None)
             if id:
                 try:
+                    # topic的hot + 1
                     cursor.execute(
                         f'''update topic set hot={hot+1} where id = {id};''')
-                    last_id = cursor.lastrowid
                     self.db.commit()
-                    return last_id
+                    return id
                 except Exception as err:
+                    # 如果插入失败则回滚
                     self.db.rollback()
                     print(err)
                     raise Exception('update topic failed.')
             else:
                 try:
+                    # 新增一条topic
                     cursor.execute(
                         f'''insert into topic(name, hot) values('{topic["name"]}',1);''')
+                    # 获取最新一条topic的id用于返回
                     last_id = cursor.lastrowid
                     self.db.commit()
                     return last_id
@@ -52,12 +56,17 @@ class DBDriver(object):
                     raise Exception('insert topic failed.')
 
     def insert_feed(self, feed: dict, topic_id_list):
+        '''插入feed, 和关联关系到数据库, 如果feed已存在则更新所有属性'''
+
+        # 获取爬虫取出的所有属性
         keys = ','.join(feed.keys())
         values = []
         for val in feed.values():
+            # 拼接sql语句 如果是数值 则转换为字符串类型, 否则强制转换为字符串类型, 并在两端加上单引号
             if isinstance(val, str):
                 values.append(rf"'{val}'")
             elif isinstance(val, list) or isinstance(val,dict):
+                # 将内容中原本的单引号全部替换为双引号, 因为单引号会导致sql执行报错
                 values.append(r"'{}'".format(str(val).replace("'",'"')))
             elif isinstance(val, int):
                 values.append(str(val))
@@ -66,6 +75,7 @@ class DBDriver(object):
 
         update_keys = []
         for key in feed.keys():
+            '''拼接更新语句, 排除mid, 主键不可更新'''
             if key=='mid':
                 continue
             update_keys.append(f"""{key}=VALUES({key})""")
@@ -75,6 +85,7 @@ class DBDriver(object):
         with self.db.cursor() as cursor:
             last_id = None
             try:
+                # 替换sql语句中所有的转义字符\, \会导致sql执行报错
                 cursor.execute(sql_string.replace(r"\'", r"'"))
                 last_id = cursor.lastrowid
                 self.db.commit()
@@ -83,7 +94,9 @@ class DBDriver(object):
                 print(err)
                 raise Exception('insert feed failed')
             try:
+                # 更新feed与topic的中间关系表
                 tid_str_list=[]
+                # 拼接sql
                 for tid in topic_id_list:
                     tid_str_list.append(f"""('{tid}', '{feed["mid"]}')""")
                 sql_string_relationship = f"""insert ignore into rs_topic_feed(topic_id, feed_mid) VALUES{','.join(tid_str_list)};"""
@@ -94,6 +107,9 @@ class DBDriver(object):
             return last_id
 
     def insert_comment(self, comment: dict):
+        '''插入comment, 如果已存在则更新所有属性'''
+
+        # 拼接sql
         keys = ','.join(comment.keys())
         values = ','.join(
             [f"'{v}'" if isinstance(v, str) else str(v) for v in comment.values()])
@@ -119,6 +135,7 @@ class DBDriver(object):
 
 
 if __name__ == "__main__":
+    # 以下是测试DBDriver工具类的代码
     db = DBDriver()
 
     from random import randint

@@ -4,23 +4,21 @@ import time
 import requests
 import json
 import re
-import pymongo
 import urllib3
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-import random
 
 chrome_options = Options()
 # 设置 webdriver 无头运行
 chrome_options.add_argument('--headless')
 # 初始化 webdriver
-driver = webdriver.Chrome(
-    executable_path="./spiders/chromedriver/chromedriver_linux", chrome_options=chrome_options)
 # driver = webdriver.Chrome(
-#     executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
+#     executable_path="./spiders/chromedriver/chromedriver_linux", chrome_options=chrome_options)
+driver = webdriver.Chrome(
+    executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
 
 # 屏蔽 https 证书报警信息
 urllib3.disable_warnings()
@@ -228,7 +226,7 @@ def parse_comments(html, mid):
 def save_topic(db, topic_list):
     topic_id_list = []
     for topic in topic_list:
-        ''.strip(' \n\r')
+        # ''.strip(' \n\r')
         topic = topic.strip(' \n\r')
         if topic == "":
             continue
@@ -238,6 +236,7 @@ def save_topic(db, topic_list):
 
 
 def format_str_list(origin):
+    '''将列表拼接为字符串'''
     result = ''
     for s in origin:
         result = '{}|{}'.format(result, s)
@@ -255,7 +254,7 @@ def save_hot_detail(db, detail, topic_id_list):
         'link': detail['link'],
         'from_dev': detail['from'],
         'at_names': [at['atName'] for at in detail['atNameList']],
-        'image_list': detail['imageList'][:-1],
+        'image_list': detail['imageList'][:-1],  # 最后一张图片是用户头像, 所以排除掉
         'video_list': detail['videoList'],
         'topic_list': detail['topicList'],
         'user_avatar': detail['user']['headPic'],
@@ -291,7 +290,7 @@ def format_content(content_list):
 
 
 # 开始抓取
-def crawl(total, conn, db):
+def crawl(total, db):
     count = 0
     page = 1
 
@@ -339,7 +338,7 @@ def crawl(total, conn, db):
     finally:
         # 关闭数据库连接和 webdriver
         print("close db conn and webdriver")
-        conn.close()
+        # conn.close()
         driver.quit()
         # 重置异常设置，用于下次重新执行抓取
         EXCEPTION_COUNT = 0
@@ -348,11 +347,11 @@ def crawl(total, conn, db):
 
 
 def run_spider(total=10):
-    db = DBConn()
+    # db = DBConn()
     mysql_driver = DBDriver()
-    db.connect()
-    conn = db.get_conn()
-    crawl(total, conn, mysql_driver)
+    # db.connect()
+    # conn = db.get_conn()
+    crawl(total, mysql_driver)
 
 
 if __name__ == '__main__':
