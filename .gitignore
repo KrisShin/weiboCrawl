@@ -2,4 +2,7 @@
 **/.idea/**
 **/__pycache__/**
 
+**/access.log
+**/error.log
+
 **/.DS_Store
