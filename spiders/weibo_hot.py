@@ -15,10 +15,10 @@ chrome_options = Options()
 # 设置 webdriver 无头运行
 chrome_options.add_argument('--headless')
 # 初始化 webdriver
-# driver = webdriver.Chrome(
-#     executable_path="./spiders/chromedriver/chromedriver_linux", chrome_options=chrome_options)
 driver = webdriver.Chrome(
-    executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
+    executable_path="./spiders/chromedriver/chromedriver_linux", chrome_options=chrome_options)
+# driver = webdriver.Chrome(
+#     executable_path="./spiders/chromedriver/chromedriver.exe", chrome_options=chrome_options)
 
 # 屏蔽 https 证书报警信息
 urllib3.disable_warnings()

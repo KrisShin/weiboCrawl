@@ -5,8 +5,7 @@ from flask import Blueprint, request
 from werkzeug.utils import redirect
 from models import Topic, Feed, Comment
 from db_init import db
-from spiders import weibo_hot
-from threading import Thread
+
 
 import jieba
 
@@ -179,6 +178,9 @@ def update_crawl_data():
     '''
     开启一个线程启动爬虫程序
     '''
+    from spiders import weibo_hot
+    from threading import Thread
+
     # 爬取条数 随机80-100，不建议太多，数量太多或者爬虫太频繁可能触发微博反爬机制
     crawl_number = random.randint(80, 100) 
 
