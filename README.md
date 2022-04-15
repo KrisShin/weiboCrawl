@@ -29,17 +29,10 @@ server 端:(flask)
 
     进入webServer文件夹
 
-    ```
-    pipenv install
-    ```
-    
-    **如果提示没有pipenv**
+    **安装所需第三方库**
 
-    可以使用```pip install pipenv```来安装
+    可以使用```pip install -r requirements -i https://pypi.douban.com/simple```来安装
 
-    然后使用```pipenv shell```进入虚拟环境
-
-    **flask 版本必须小于2.0 falsk-migrate 必须小于3.0**
 4.  启动web服务
 
     ```python run app.py```

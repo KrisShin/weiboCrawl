@@ -14,6 +14,7 @@ from selenium.webdriver.chrome.options import Options
 chrome_options = Options()
 # 设置 webdriver 无头运行
 chrome_options.add_argument('--headless')
+chrome_options.add_argument('--remote-debugging-port=6663')
 # 初始化 webdriver
 driver = webdriver.Chrome(
     executable_path="./spiders/chromedriver/chromedriver_linux", chrome_options=chrome_options)
