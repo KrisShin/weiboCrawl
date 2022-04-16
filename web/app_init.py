@@ -1,4 +1,6 @@
-from flask.app import Flask
+from flask import Flask
+from flask_migrate import Migrate
+from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -18,7 +20,21 @@ def create_app():
     app.config.update(
         SQLALCHEMY_DATABASE_URI=db_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=True,
-        SQLALCHEMY_COMMIT_ON_TEARDOWN=False
+        SQLALCHEMY_COMMIT_ON_TEARDOWN=False,
     )
     db.init_app(app)
+
+    # 注册蓝图路由
+    app.register_blueprint(weibo)
+
     return app
+
+
+def register_migrate(app):
+    migrate = Migrate(app, db)
+    return migrate
+
+
+def register_login_manager(app):
+    login_manager = LoginManager(app)
+    return login_manager

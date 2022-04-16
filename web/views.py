@@ -1,16 +1,22 @@
 import random
+
 from flask.json import jsonify
 from flask.templating import render_template
 from flask import Blueprint, request
 from werkzeug.utils import redirect
-from models import Topic, Feed, Comment
-from db_init import db
-
-
 import jieba
+
+from web.models import Topic, Feed, Comment, User
+from web.app_init import db
+from app import login_manager
 
 # 创建蓝图用于管理url
 weibo = Blueprint('weibo', __name__, template_folder='templates')
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
 
 
 @weibo.route('/test', methods=['GET', "POST"])
@@ -37,13 +43,22 @@ def show_page():
 
     feed_list = Feed.query
     # total是计算分页总页数的, 如果条数除每页条数正好除尽, 那么总页数就是商, 否则总页数是商+1
-    total = feed_list.count(
-    )//page_size if feed_list.count() % page_size == 0 else feed_list.count()//page_size+1
+    total = (
+        feed_list.count() // page_size
+        if feed_list.count() % page_size == 0
+        else feed_list.count() // page_size + 1
+    )
     # 取page页的page_size条数据
-    feed_list = feed_list.order_by(Feed.publish_time.desc()).offset(page*page_size).limit(page_size)
+    feed_list = (
+        feed_list.order_by(Feed.publish_time.desc())
+        .offset(page * page_size)
+        .limit(page_size)
+    )
     # 全部格式化为dict对象才能返回
     feed_list = [dict(feed) for feed in feed_list]
-    return render_template('index.html', topic_list=topic_list, feed_list=feed_list, total=total, page=page)
+    return render_template(
+        'index.html', topic_list=topic_list, feed_list=feed_list, total=total, page=page
+    )
 
 
 @weibo.route('/all_topic', methods=['GET'])
@@ -80,8 +95,11 @@ def add_test_data():
         db.session.add(t)
         db.session.commit()
         for f_id in range(3):
-            f = Feed(mid=str(randint(1000, 9999)), topic=t,
-                     content=f'feed {f_id} of topic {t.name}')
+            f = Feed(
+                mid=str(randint(1000, 9999)),
+                topic=t,
+                content=f'feed {f_id} of topic {t.name}',
+            )
             f.forward_count = randint(99, 999)
             f.comment_count = randint(99, 999)
             f.like_count = randint(99, 999)
@@ -89,8 +107,11 @@ def add_test_data():
             db.session.add(f)
             db.session.commit()
             for c_id in range(3):
-                c = Comment(id=str(randint(1000, 9999)), feed=f,
-                            content=f'comment {c_id} of feed {f.mid}')
+                c = Comment(
+                    id=str(randint(1000, 9999)),
+                    feed=f,
+                    content=f'comment {c_id} of feed {f.mid}',
+                )
                 c.publish_time = datetime.now()
                 c.like_count = randint(99, 999)
                 c.reply_count = randint(99, 999)
@@ -153,7 +174,7 @@ def feed_page_filter_by_keyword():
                 feed_list.append(feed)
 
     # 将所有获得的帖子按照发布时间排序, 新发布的帖子排到前面
-    feed_list = sorted(feed_list, key=lambda feed:feed.publish_time, reverse=True)
+    feed_list = sorted(feed_list, key=lambda feed: feed.publish_time, reverse=True)
 
     # 热度前8的topic
     topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
@@ -162,15 +183,20 @@ def feed_page_filter_by_keyword():
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 1000))
     feed_count = len(feed_list)
-    total = feed_count//page_size if feed_count//page_size == 0 else feed_count//page_size+1
+    total = (
+        feed_count // page_size
+        if feed_count // page_size == 0
+        else feed_count // page_size + 1
+    )
 
-    return render_template('index.html',
-                           topic_list=topic_list,
-                           feed_list=feed_list[(
-                               page-1)*page_size:page*page_size],
-                           page=page,
-                           words=words,
-                           total=total)
+    return render_template(
+        'index.html',
+        topic_list=topic_list,
+        feed_list=feed_list[(page - 1) * page_size : page * page_size],
+        page=page,
+        words=words,
+        total=total,
+    )
 
 
 @weibo.route('/api/update_crawl_data', methods=['GET'])
@@ -182,7 +208,7 @@ def update_crawl_data():
     from threading import Thread
 
     # 爬取条数 随机80-100，不建议太多，数量太多或者爬虫太频繁可能触发微博反爬机制
-    crawl_number = random.randint(80, 100) 
+    crawl_number = random.randint(80, 100)
 
     # 单独开启一个线程运行爬虫程序, 避免请求挂起
     job = Thread(target=weibo_hot.run_spider, args=(crawl_number,))
@@ -205,7 +231,9 @@ def feed_page():
     feed = Feed.query.filter_by(mid=mid).first()
     # 获取feed的所有comment并格式化为dict
     comment_list = [dict(comment) for comment in feed.comments]
-    return render_template('post.html', feed=dict(feed), comment_list=comment_list, topic_list=topic_list)
+    return render_template(
+        'post.html', feed=dict(feed), comment_list=comment_list, topic_list=topic_list
+    )
 
 
 @weibo.route('/topic', methods=['GET'])
@@ -223,16 +251,21 @@ def feed_page_filter_by_topic():
 
     # 该topic下的feed
     feed_list = [dict(feed) for feed in topic_obj.feeds]
-    
+
     # 分页
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 1000))
     feed_count = len(feed_list)
-    total = feed_count//page_size if feed_count//page_size == 0 else feed_count//page_size+1
+    total = (
+        feed_count // page_size
+        if feed_count // page_size == 0
+        else feed_count // page_size + 1
+    )
 
-    return render_template('index.html',
-                           topic_list=topic_list,
-                           feed_list=feed_list[(
-                               page-1)*page_size:page*page_size],
-                           page=page,
-                           total=total)
+    return render_template(
+        'index.html',
+        topic_list=topic_list,
+        feed_list=feed_list[(page - 1) * page_size : page * page_size],
+        page=page,
+        total=total,
+    )

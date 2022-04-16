@@ -1,15 +1,19 @@
-from db_init import db
+from email.policy import default
+from web.app_init import db
 
-# topic和feed中间关联表
-rs_topic_feed = db.Table('rs_topic_feed',
-                db.Column('topic_id', db.Integer, db.ForeignKey(
-                    'topic.id'), primary_key=True),
-                db.Column('feed_mid', db.String(32), db.ForeignKey('feed.mid'), primary_key=True))
+# topic和weibo中间关联表
+rs_topic_weibo = db.Table(
+    'rs_topic_weibo',
+    db.Column('topic_id', db.Integer, db.ForeignKey('topic.id'), primary_key=True),
+    db.Column('feed_mid', db.String(32), db.ForeignKey('feed.mid'), primary_key=True),
+)
+
 
 class Topic(db.Model):
     '''
     Topic 表, 对应微博话题
     '''
+
     __tablename__ = 'topic'
     id = db.Column(db.Integer, primary_key=True)  # id 唯一主键
     name = db.Column(db.String(256), unique=True)  # 话题名字
@@ -23,16 +27,25 @@ class Topic(db.Model):
         return getattr(self, item)
 
 
-class Feed(db.Model):
+class Weibo(db.Model):
     '''
-    Feed表, 对应微博正文
+    Weibo表, 对应微博正文
     '''
-    __tabelname__ = 'feed'
+
+    __tabelname__ = 'wb_weibo'
     mid = db.Column(db.String(32), primary_key=True)  # 唯一主键
-    topics = db.relationship('Topic', secondary=rs_topic_feed, lazy='subquery', backref=db.backref('feeds', lazy=True))  # 关联topic
+    topics = db.relationship(
+        'Topic',
+        secondary=rs_topic_feed,
+        lazy='subquery',
+        backref=db.backref('feeds', lazy=True),
+    )  # 关联topic
     content = db.Column(db.Text)  # 正文
-    user_avatar = db.Column(db.String(1024))  # 用户头像
-    user_name = db.Column(db.String(256))  # 用户名
+    # user_avatar = db.Column(db.String(1024))  # 用户头像
+    # user_name = db.Column(db.String(256))  # 用户名
+    user = db.relationship(
+        'User', backref=db.backref('weibo', lazy='dynamic')
+    )  # 外键关联User
     publish_time = db.Column(db.String(256))  # 发布时间
     link = db.Column(db.String(1024))  # 页面链接
     from_dev = db.Column(db.String(1024))  # 使用设备
@@ -62,14 +75,21 @@ class Feed(db.Model):
             'user_homepage',
             'image_list',
             'video_list',
-            'topic_list',)
+            'topic_list',
+        )
 
     def __getitem__(self, item):
         if item == 'topic':
             return [topic.name for topic in self.topics]
         elif item == 'publish_time':
             # 如果发布时间有值则取前19位, 去除utc格式时间的无效小数位
-            return getattr(self, item)[:19] if getattr(self, item) else getattr(self, item)
+            return (
+                getattr(self, item)[:19] if getattr(self, item) else getattr(self, item)
+            )
+        elif item == 'user_avatar':
+            return self.user.avatar
+        elif item == 'user_name':
+            return self.user.username
         return getattr(self, item)
 
 
@@ -77,13 +97,18 @@ class Comment(db.Model):
     '''
     Comment表, 对应微博评论
     '''
-    __tablename__ = 'comment'
+
+    __tablename__ = 'wb_comment'
     id = db.Column(db.String(32), primary_key=True)  # 唯一主键
-    feed_id = db.Column(db.String(32), db.ForeignKey('feed.mid'))  # 关联到帖子id
-    feed = db.relationship(
-        'Feed', backref=db.backref('comments', lazy='dynamic'))  # 外键关联Feed
-    user_avatar = db.Column(db.String(1024))  # 评论用户头像
-    user_name = db.Column(db.String(256))  # 评论用户名
+    weibo_id = db.Column(db.String(32), db.ForeignKey('feed.mid'))  # 关联到帖子id
+    weibo = db.relationship(
+        'Weibo', backref=db.backref('comments', lazy='dynamic')
+    )  # 外键关联Weibo
+    # user_avatar = db.Column(db.String(1024))  # 评论用户头像
+    # user_name = db.Column(db.String(256))  # 评论用户名
+    user = db.relationship(
+        'User', backref=db.backref('weibo', lazy='dynamic')
+    )  # 外键关联User
     content = db.Column(db.Text)  # 评论内容
     image = db.Column(db.String(1024))  # 评论图片
     like_count = db.Column(db.Integer)  # 点赞数量
@@ -92,19 +117,39 @@ class Comment(db.Model):
     def keys(self):
         return (
             'id',
-            'feed_id',
+            'weibo_id',
             'user_avatar',
             'user_name',
             'content',
             'image',
             'like_count',
-            'reply_count')
+            'reply_count',
+        )
 
     def __getitem__(self, item):
         return getattr(self, item)
 
 
+class WeiboText(db.Model):
+    """
+    爬取下来的网页原始文件
+    """
+
+    url = db.Column(db.String(1024))
+    response_text = db.Column(db.Text)
+    response_code = db.Column(db.Integer)
+
+    __tablename__ = 'weibo_text'
+
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(256), unique=True)
-    password = db.Column(db.String(256))
+    password = db.Column(db.String(512))
+    description = db.Column(db.Text)
+    gender = db.Column(db.Boolean(default=True))
+    age = db.Column(db.Integer)
+    phone = db.Column(db.String(16))
+    avatar = db.Column(db.String(1024))
+    is_admin = db.Column(db.Boolean(default=False))
+    is_user = db.Column(db.Boolean(default=False))
