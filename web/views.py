@@ -3,15 +3,14 @@ import random
 from flask.json import jsonify
 from flask.templating import render_template
 from flask import Blueprint, request
-from werkzeug.utils import redirect
 import jieba
+from werkzeug.utils import redirect
 
-from web.models import Topic, Feed, Comment, User
-from web.app_init import db
-from app import login_manager
+from web.global_variable import db, login_manager
+from web.models import Topic, Weibo, Comment, User
 
 # 创建蓝图用于管理url
-weibo = Blueprint('weibo', __name__, template_folder='templates')
+weibo_bp = Blueprint('weibo', __name__, template_folder='templates')
 
 
 @login_manager.user_loader
@@ -19,7 +18,7 @@ def load_user(user_id):
     return User.get(user_id)
 
 
-@weibo.route('/test', methods=['GET', "POST"])
+@weibo_bp.route('/test', methods=['GET', "POST"])
 def test_hello():
     '''
     测试接口 返回 hello flask
@@ -27,7 +26,7 @@ def test_hello():
     return jsonify({'msg': 'hello flask'})
 
 
-@weibo.route('/', methods=['GET', 'POST'])
+@weibo_bp.route('/', methods=['GET', 'POST'])
 def show_page():
     '''
     返回首页数据
@@ -41,27 +40,31 @@ def show_page():
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 5))
 
-    feed_list = Feed.query
+    weibo_list = Weibo.query
     # total是计算分页总页数的, 如果条数除每页条数正好除尽, 那么总页数就是商, 否则总页数是商+1
     total = (
-        feed_list.count() // page_size
-        if feed_list.count() % page_size == 0
-        else feed_list.count() // page_size + 1
+        weibo_list.count() // page_size
+        if weibo_list.count() % page_size == 0
+        else weibo_list.count() // page_size + 1
     )
     # 取page页的page_size条数据
-    feed_list = (
-        feed_list.order_by(Feed.publish_time.desc())
+    weibo_list = (
+        weibo_list.order_by(Weibo.publish_time.desc())
         .offset(page * page_size)
         .limit(page_size)
     )
     # 全部格式化为dict对象才能返回
-    feed_list = [dict(feed) for feed in feed_list]
+    weibo_list = [dict(weibo) for weibo in weibo_list]
     return render_template(
-        'index.html', topic_list=topic_list, feed_list=feed_list, total=total, page=page
+        'index.html',
+        topic_list=topic_list,
+        weibo_list=weibo_list,
+        total=total,
+        page=page,
     )
 
 
-@weibo.route('/all_topic', methods=['GET'])
+@weibo_bp.route('/all_topic', methods=['GET'])
 def api_get_all_topic():
     '''
     测试接口 用于获取所有的topic
@@ -71,7 +74,7 @@ def api_get_all_topic():
     return jsonify(topic_list)
 
 
-@weibo.route('/all_comment', methods=['GET'])
+@weibo_bp.route('/all_comment', methods=['GET'])
 def api_get_all_comment():
     '''
     测试接口 用于获取所有的comment
@@ -82,7 +85,7 @@ def api_get_all_comment():
     return jsonify(comment_list)
 
 
-@weibo.route('/test_data', methods=['GET'])
+@weibo_bp.route('/test_data', methods=['GET'])
 def add_test_data():
     '''
     测试接口 用于新增一些随机数据到数据库
@@ -95,10 +98,10 @@ def add_test_data():
         db.session.add(t)
         db.session.commit()
         for f_id in range(3):
-            f = Feed(
+            f = Weibo(
                 mid=str(randint(1000, 9999)),
                 topic=t,
-                content=f'feed {f_id} of topic {t.name}',
+                content=f'weibo {f_id} of topic {t.name}',
             )
             f.forward_count = randint(99, 999)
             f.comment_count = randint(99, 999)
@@ -109,8 +112,8 @@ def add_test_data():
             for c_id in range(3):
                 c = Comment(
                     id=str(randint(1000, 9999)),
-                    feed=f,
-                    content=f'comment {c_id} of feed {f.mid}',
+                    weibo=f,
+                    content=f'comment {c_id} of weibo {f.mid}',
                 )
                 c.publish_time = datetime.now()
                 c.like_count = randint(99, 999)
@@ -122,11 +125,11 @@ def add_test_data():
     return jsonify({'msg': 'ok'})
 
 
-@weibo.route('/search', methods=['GET'])
-def feed_page_filter_by_keyword():
+@weibo_bp.route('/search', methods=['GET'])
+def weibo_page_filter_by_keyword():
     '''
     搜索接口 用于搜索相关字段
-    使用jieba对输入的字符串进行分词, 并按照分词后的结果模糊搜索相关的topic, 并返回关联的feed
+    使用jieba对输入的字符串进行分词, 并按照分词后的结果模糊搜索相关的topic, 并返回关联的weibo
     '''
     # 获取参数
     key_string = request.args.get('search_str')
@@ -162,19 +165,19 @@ def feed_page_filter_by_keyword():
     # 获取跟搜索关键词相关的topic的ID
     topic_id_list = [t[0] for t in res]
 
-    # feed的id列表, 用于去重
-    feed_id_list = []
-    feed_list = []
+    # weibo的id列表, 用于去重
+    weibo_id_list = []
+    weibo_list = []
 
-    # 获取过滤出的topic下的所有feed
+    # 获取过滤出的topic下的所有weibo
     for topic in Topic.query.filter(Topic.id.in_(topic_id_list)).all():
-        for feed in topic.feeds:
-            if feed.mid not in feed_id_list:
-                feed_id_list.append(feed.mid)
-                feed_list.append(feed)
+        for weibo in topic.weibos:
+            if weibo.mid not in weibo_id_list:
+                weibo_id_list.append(weibo.mid)
+                weibo_list.append(weibo)
 
     # 将所有获得的帖子按照发布时间排序, 新发布的帖子排到前面
-    feed_list = sorted(feed_list, key=lambda feed: feed.publish_time, reverse=True)
+    weibo_list = sorted(weibo_list, key=lambda weibo: weibo.publish_time, reverse=True)
 
     # 热度前8的topic
     topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
@@ -182,24 +185,24 @@ def feed_page_filter_by_keyword():
     # 分页相关
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 1000))
-    feed_count = len(feed_list)
+    weibo_count = len(weibo_list)
     total = (
-        feed_count // page_size
-        if feed_count // page_size == 0
-        else feed_count // page_size + 1
+        weibo_count // page_size
+        if weibo_count // page_size == 0
+        else weibo_count // page_size + 1
     )
 
     return render_template(
         'index.html',
         topic_list=topic_list,
-        feed_list=feed_list[(page - 1) * page_size : page * page_size],
+        weibo_list=weibo_list[(page - 1) * page_size : page * page_size],
         page=page,
         words=words,
         total=total,
     )
 
 
-@weibo.route('/api/update_crawl_data', methods=['GET'])
+@weibo_bp.route('/api/update_crawl_data', methods=['GET'])
 def update_crawl_data():
     '''
     开启一个线程启动爬虫程序
@@ -217,8 +220,8 @@ def update_crawl_data():
     return jsonify({'msg': 'OK'})
 
 
-@weibo.route('/feed', methods=['GET'])
-def feed_page():
+@weibo_bp.route('/weibo', methods=['GET'])
+def weibo_page():
     '''
     微博正文详情页面
     '''
@@ -228,18 +231,18 @@ def feed_page():
     topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
     topic_list = [dict(topic) for topic in topic_list]
 
-    feed = Feed.query.filter_by(mid=mid).first()
-    # 获取feed的所有comment并格式化为dict
-    comment_list = [dict(comment) for comment in feed.comments]
+    weibo = Weibo.query.filter_by(mid=mid).first()
+    # 获取weibo的所有comment并格式化为dict
+    comment_list = [dict(comment) for comment in weibo.comments]
     return render_template(
-        'post.html', feed=dict(feed), comment_list=comment_list, topic_list=topic_list
+        'post.html', weibo=dict(weibo), comment_list=comment_list, topic_list=topic_list
     )
 
 
-@weibo.route('/topic', methods=['GET'])
-def feed_page_filter_by_topic():
+@weibo_bp.route('/topic', methods=['GET'])
+def weibo_page_filter_by_topic():
     '''
-    按话题过滤feed
+    按话题过滤weibo
     '''
     # 热门话题
     topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
@@ -249,23 +252,23 @@ def feed_page_filter_by_topic():
     topic_id = request.args.get('topic')
     topic_obj = Topic.query.filter_by(id=int(topic_id)).first()
 
-    # 该topic下的feed
-    feed_list = [dict(feed) for feed in topic_obj.feeds]
+    # 该topic下的weibo
+    weibo_list = [dict(weibo) for weibo in topic_obj.weibos]
 
     # 分页
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 1000))
-    feed_count = len(feed_list)
+    weibo_count = len(weibo_list)
     total = (
-        feed_count // page_size
-        if feed_count // page_size == 0
-        else feed_count // page_size + 1
+        weibo_count // page_size
+        if weibo_count // page_size == 0
+        else weibo_count // page_size + 1
     )
 
     return render_template(
         'index.html',
         topic_list=topic_list,
-        feed_list=feed_list[(page - 1) * page_size : page * page_size],
+        weibo_list=weibo_list[(page - 1) * page_size : page * page_size],
         page=page,
         total=total,
     )

@@ -1,9 +1,6 @@
 from flask import Flask
-from flask_migrate import Migrate
-from flask_login import LoginManager
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+from web.global_variable import db, register_view_blueprint, migrate, login_manager
+from web.views import weibo_bp
 
 
 def create_app():
@@ -22,19 +19,12 @@ def create_app():
         SQLALCHEMY_TRACK_MODIFICATIONS=True,
         SQLALCHEMY_COMMIT_ON_TEARDOWN=False,
     )
+
     db.init_app(app)
 
-    # 注册蓝图路由
-    app.register_blueprint(weibo)
+    app = register_view_blueprint(app, weibo_bp)
+
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
 
     return app
-
-
-def register_migrate(app):
-    migrate = Migrate(app, db)
-    return migrate
-
-
-def register_login_manager(app):
-    login_manager = LoginManager(app)
-    return login_manager

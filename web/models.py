@@ -1,11 +1,10 @@
-from email.policy import default
-from web.app_init import db
+from web.global_variable import db
 
 # topic和weibo中间关联表
 rs_topic_weibo = db.Table(
     'rs_topic_weibo',
-    db.Column('topic_id', db.Integer, db.ForeignKey('topic.id'), primary_key=True),
-    db.Column('feed_mid', db.String(32), db.ForeignKey('feed.mid'), primary_key=True),
+    db.Column('topic_id', db.Integer, db.ForeignKey('wb_topic.id'), primary_key=True),
+    db.Column('weibo_mid', db.String(32), db.ForeignKey('wb_weibo.mid'), primary_key=True),
 )
 
 
@@ -14,7 +13,7 @@ class Topic(db.Model):
     Topic 表, 对应微博话题
     '''
 
-    __tablename__ = 'topic'
+    __tablename__ = 'wb_topic'
     id = db.Column(db.Integer, primary_key=True)  # id 唯一主键
     name = db.Column(db.String(256), unique=True)  # 话题名字
     hot = db.Column(db.Integer, default=1)  # 话题热度（帖子数量）
@@ -36,15 +35,15 @@ class Weibo(db.Model):
     mid = db.Column(db.String(32), primary_key=True)  # 唯一主键
     topics = db.relationship(
         'Topic',
-        secondary=rs_topic_feed,
+        secondary=rs_topic_weibo,
         lazy='subquery',
-        backref=db.backref('feeds', lazy=True),
+        backref=db.backref('weibo_list', lazy=True),
     )  # 关联topic
     content = db.Column(db.Text)  # 正文
     # user_avatar = db.Column(db.String(1024))  # 用户头像
     # user_name = db.Column(db.String(256))  # 用户名
     user = db.relationship(
-        'User', backref=db.backref('weibo', lazy='dynamic')
+        'User', backref=db.backref('weibo_list', lazy='dynamic')
     )  # 外键关联User
     publish_time = db.Column(db.String(256))  # 发布时间
     link = db.Column(db.String(1024))  # 页面链接
@@ -100,14 +99,14 @@ class Comment(db.Model):
 
     __tablename__ = 'wb_comment'
     id = db.Column(db.String(32), primary_key=True)  # 唯一主键
-    weibo_id = db.Column(db.String(32), db.ForeignKey('feed.mid'))  # 关联到帖子id
+    weibo_id = db.Column(db.String(32), db.ForeignKey('weibo.mid'))  # 关联到帖子id
     weibo = db.relationship(
         'Weibo', backref=db.backref('comments', lazy='dynamic')
     )  # 外键关联Weibo
     # user_avatar = db.Column(db.String(1024))  # 评论用户头像
     # user_name = db.Column(db.String(256))  # 评论用户名
     user = db.relationship(
-        'User', backref=db.backref('weibo', lazy='dynamic')
+        'User', backref=db.backref('comments', lazy='dynamic')
     )  # 外键关联User
     content = db.Column(db.Text)  # 评论内容
     image = db.Column(db.String(1024))  # 评论图片
@@ -135,11 +134,12 @@ class WeiboText(db.Model):
     爬取下来的网页原始文件
     """
 
+    id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String(1024))
     response_text = db.Column(db.Text)
     response_code = db.Column(db.Integer)
 
-    __tablename__ = 'weibo_text'
+    __tablename__ = 'wb_text'
 
 
 class User(db.Model):
@@ -147,9 +147,11 @@ class User(db.Model):
     username = db.Column(db.String(256), unique=True)
     password = db.Column(db.String(512))
     description = db.Column(db.Text)
-    gender = db.Column(db.Boolean(default=True))
+    gender = db.Column(db.Boolean, default=True)
     age = db.Column(db.Integer)
     phone = db.Column(db.String(16))
     avatar = db.Column(db.String(1024))
-    is_admin = db.Column(db.Boolean(default=False))
-    is_user = db.Column(db.Boolean(default=False))
+    is_admin = db.Column(db.Boolean, default=False)
+    is_user = db.Column(db.Boolean, default=False)
+
+    __tablename__ = 'wb_user'
