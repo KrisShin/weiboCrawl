@@ -1,8 +1,8 @@
-**/.vscode/**
-**/.idea/**
-**/__pycache__/**
+**/.vscode
+**/.idea
+**/.venv
 
-**/access.log
-**/error.log
+**/__pycache__/**
+**/*.pyc
 
 **/.DS_Store

@@ -2,8 +2,5 @@ jieba
 flask
 flask-sqlalchemy
 flask-migrate
+flask-login
 pymysql
-requests
-cryptography
-lxml
-selenium

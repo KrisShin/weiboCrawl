@@ -102,3 +102,9 @@ class Comment(db.Model):
 
     def __getitem__(self, item):
         return getattr(self, item)
+
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(256), unique=True)
+    password = db.Column(db.String(256))
