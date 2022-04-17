@@ -6,7 +6,7 @@ from flask import Blueprint, request
 import jieba
 from werkzeug.utils import redirect
 
-from web.global_variable import db, login_manager
+from web.global_variable import db, login_manager, default_resp
 from web.models import Topic, Weibo, Comment, User
 
 # 创建蓝图用于管理url
@@ -16,14 +16,6 @@ weibo_bp = Blueprint('weibo', __name__, template_folder='templates')
 @login_manager.user_loader
 def load_user(user_id):
     return User.get(user_id)
-
-
-@weibo_bp.route('/test', methods=['GET', "POST"])
-def test_hello():
-    '''
-    测试接口 返回 hello flask
-    '''
-    return jsonify({'msg': 'hello flask'})
 
 
 @weibo_bp.route('/', methods=['GET', 'POST'])
@@ -55,13 +47,16 @@ def show_page():
     )
     # 全部格式化为dict对象才能返回
     weibo_list = [dict(weibo) for weibo in weibo_list]
-    return render_template(
-        'index.html',
-        topic_list=topic_list,
-        weibo_list=weibo_list,
-        total=total,
-        page=page,
+    resp = default_resp
+    resp.update(
+        {
+            'topic_list': topic_list,
+            'weibo_list': weibo_list,
+            'total': total,
+            'page': page,
+        }
     )
+    return render_template('index.html', **resp)
 
 
 @weibo_bp.route('/all_topic', methods=['GET'])
@@ -192,14 +187,17 @@ def weibo_page_filter_by_keyword():
         else weibo_count // page_size + 1
     )
 
-    return render_template(
-        'index.html',
-        topic_list=topic_list,
-        weibo_list=weibo_list[(page - 1) * page_size : page * page_size],
-        page=page,
-        words=words,
-        total=total,
+    resp = default_resp
+    resp.update(
+        {
+            'topic_list': topic_list,
+            'weibo_list': weibo_list[(page - 1) * page_size : page * page_size],
+            'page': page,
+            'total': total,
+            'words': words,
+        }
     )
+    return render_template('index.html', **resp)
 
 
 @weibo_bp.route('/api/update_crawl_data', methods=['GET'])
@@ -234,9 +232,16 @@ def weibo_page():
     weibo = Weibo.query.filter_by(mid=mid).first()
     # 获取weibo的所有comment并格式化为dict
     comment_list = [dict(comment) for comment in weibo.comments]
-    return render_template(
-        'post.html', weibo=dict(weibo), comment_list=comment_list, topic_list=topic_list
+
+    resp = default_resp
+    resp.update(
+        {
+            'weibo': dict(weibo),
+            'comment_list': comment_list,
+            'topic_list': topic_list,
+        }
     )
+    return render_template('post.html', **resp)
 
 
 @weibo_bp.route('/topic', methods=['GET'])
@@ -265,10 +270,29 @@ def weibo_page_filter_by_topic():
         else weibo_count // page_size + 1
     )
 
-    return render_template(
-        'index.html',
-        topic_list=topic_list,
-        weibo_list=weibo_list[(page - 1) * page_size : page * page_size],
-        page=page,
-        total=total,
+    resp = default_resp
+    resp.update(
+        {
+            'topic_list': topic_list,
+            'weibo_list': weibo_list[(page - 1) * page_size : page * page_size],
+            'page': page,
+            'total': total,
+        }
     )
+
+    return render_template('index.html', **resp)
+
+
+@weibo_bp.route('/', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        resp = default_resp
+        resp.update()
+        return render_template('login.html', **resp)
+    elif request.method == 'POST':
+        return jsonify()
+
+
+@weibo_bp.route('/logout', methods=['GET', 'POST'])
+def login():
+    return redirect('/')
