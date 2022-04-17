@@ -4,7 +4,9 @@ from web.global_variable import db
 rs_topic_weibo = db.Table(
     'rs_topic_weibo',
     db.Column('topic_id', db.Integer, db.ForeignKey('wb_topic.id'), primary_key=True),
-    db.Column('weibo_mid', db.String(32), db.ForeignKey('wb_weibo.mid'), primary_key=True),
+    db.Column(
+        'weibo_mid', db.String(32), db.ForeignKey('wb_weibo.mid'), primary_key=True
+    ),
 )
 
 
@@ -31,7 +33,7 @@ class Weibo(db.Model):
     Weibo表, 对应微博正文
     '''
 
-    __tabelname__ = 'wb_weibo'
+    __tablename__ = 'wb_weibo'
     mid = db.Column(db.String(32), primary_key=True)  # 唯一主键
     topics = db.relationship(
         'Topic',
@@ -99,7 +101,7 @@ class Comment(db.Model):
 
     __tablename__ = 'wb_comment'
     id = db.Column(db.String(32), primary_key=True)  # 唯一主键
-    weibo_id = db.Column(db.String(32), db.ForeignKey('weibo.mid'))  # 关联到帖子id
+    weibo_id = db.Column(db.String(32), db.ForeignKey('wb_weibo.mid'))  # 关联到帖子id
     weibo = db.relationship(
         'Weibo', backref=db.backref('comments', lazy='dynamic')
     )  # 外键关联Weibo
