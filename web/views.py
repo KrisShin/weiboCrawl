@@ -2,7 +2,8 @@ import random
 
 from flask.json import jsonify
 from flask.templating import render_template
-from flask import Blueprint, request
+from flask import Blueprint, flash, request
+from flask_login import login_required, login_user
 import jieba
 from werkzeug.utils import redirect
 
@@ -15,20 +16,10 @@ weibo_bp = Blueprint('weibo', __name__, template_folder='templates')
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    return User.query.get(user_id)
 
 
-@weibo_bp.route('/', methods=['GET', 'POST'])
-def show_page():
-    '''
-    返回首页数据
-    '''
-    # 获取热度最高的前8个Topic 左下角展示的那一列
-    topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
-    # 格式化Topic对象为dict对象用于返回json格式
-    topic_list = [dict(topic) for topic in topic_list]
-
-    # 获取传入的分页参数, 如果没有那么默认当前页面是第一页, 每页展示5条微博
+def home_page_content():
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 5))
 
@@ -50,10 +41,28 @@ def show_page():
     resp = default_resp
     resp.update(
         {
-            'topic_list': topic_list,
             'weibo_list': weibo_list,
             'total': total,
             'page': page,
+        }
+    )
+    return resp
+
+
+@weibo_bp.route('/home', methods=['GET', 'POST'])
+def show_page():
+    '''
+    返回首页数据
+    '''
+    # 获取热度最高的前8个Topic 左下角展示的那一列
+    topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
+    # 格式化Topic对象为dict对象用于返回json格式
+    topic_list = [dict(topic) for topic in topic_list]
+
+    resp = home_page_content()
+    resp.update(
+        {
+            'topic_list': topic_list,
         }
     )
     return render_template('index.html', **resp)
@@ -121,6 +130,7 @@ def add_test_data():
 
 
 @weibo_bp.route('/search', methods=['GET'])
+@login_required
 def weibo_page_filter_by_keyword():
     '''
     搜索接口 用于搜索相关字段
@@ -132,7 +142,7 @@ def weibo_page_filter_by_keyword():
     exclude = bool(request.args.get('exclude'))
     if not key_string.split():
         # 如果输入空字符串, 或者不输入内容直接点击搜索, 那么重定向到首页
-        return redirect('/')
+        return redirect('/home')
 
     # jieba分词关键字
     keywords = jieba.cut(key_string, cut_all=True)
@@ -201,6 +211,7 @@ def weibo_page_filter_by_keyword():
 
 
 @weibo_bp.route('/api/update_crawl_data', methods=['GET'])
+@login_required
 def update_crawl_data():
     '''
     开启一个线程启动爬虫程序
@@ -219,6 +230,7 @@ def update_crawl_data():
 
 
 @weibo_bp.route('/weibo', methods=['GET'])
+@login_required
 def weibo_page():
     '''
     微博正文详情页面
@@ -245,6 +257,7 @@ def weibo_page():
 
 
 @weibo_bp.route('/topic', methods=['GET'])
+@login_required
 def weibo_page_filter_by_topic():
     '''
     按话题过滤weibo
@@ -287,12 +300,62 @@ def weibo_page_filter_by_topic():
 def login():
     if request.method == 'GET':
         resp = default_resp
-        resp.update()
         return render_template('login.html', **resp)
     elif request.method == 'POST':
-        return jsonify()
+        form = request.form
+        username = form.get('username')
+        password = form.get('password')
+        if not all((username, password)):
+            return jsonify({'error': '缺少参数'})
+        user_obj = User.query.filter_by(username=username).first()
+        if not user_obj:
+            user_obj = User(username=username, password=password)
+            db.session.add(user_obj)
+            db.session.commit()
+            # return jsonify({'error': '用户不存在'})
+        if password != user_obj.password:
+            return jsonify({'error': '密码错误'})
+        if not user_obj.is_user:
+            return jsonify({'error': '请联系管理员授权登录'})
+        login_user(user_obj)
+        flash('欢迎' + user_obj.username)
+        return redirect('/home')
 
 
 @weibo_bp.route('/logout', methods=['GET', 'POST'])
-def login():
+@login_required
+def logout():
     return redirect('/')
+
+
+@weibo_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'GET':
+        return render_template('register.html', **default_resp)
+    if request.method == 'POST':
+        form = request.form
+        username = form.get('username')
+        password = form.get('password')
+        age = form.get('age')
+        gender = form.get('gender')
+        phone = form.get('phone')
+        description = form.get('description')
+        if not all((username, password)):
+            return jsonify({'error': '用户名和密码必填'})
+        if User.query.filter_by(username=username).first():
+            return jsonify({'error': '用户名已存在'})
+        user_obj = User(username=username, password=password)
+        if age and age.isdigit():
+            age = int(age)
+            if age > 120 or age < 0:
+                return jsonify({'error': '年龄必须在0-120之间'})
+            user_obj.age = age
+        if gender:
+            user_obj.gender = gender == 'true'
+        if phone and phone.isdigit():
+            user_obj.phone = phone
+        if description:
+            user_obj.description = description
+        db.session.add(user_obj)
+        db.session.commit()
+        return redirect('/')

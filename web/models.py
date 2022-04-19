@@ -1,4 +1,5 @@
 from web.global_variable import db
+from flask_login import UserMixin
 
 # topic和weibo中间关联表
 rs_topic_weibo = db.Table(
@@ -44,6 +45,7 @@ class Weibo(db.Model):
     content = db.Column(db.Text)  # 正文
     # user_avatar = db.Column(db.String(1024))  # 用户头像
     # user_name = db.Column(db.String(256))  # 用户名
+    user_id = db.Column(db.Integer, db.ForeignKey('wb_user.id'))  # 关联到用户id
     user = db.relationship(
         'User', backref=db.backref('weibo_list', lazy='dynamic')
     )  # 外键关联User
@@ -107,6 +109,7 @@ class Comment(db.Model):
     )  # 外键关联Weibo
     # user_avatar = db.Column(db.String(1024))  # 评论用户头像
     # user_name = db.Column(db.String(256))  # 评论用户名
+    user_id = db.Column(db.Integer, db.ForeignKey('wb_user.id'))  # 关联到用户id
     user = db.relationship(
         'User', backref=db.backref('comments', lazy='dynamic')
     )  # 外键关联User
@@ -144,7 +147,7 @@ class WeiboText(db.Model):
     __tablename__ = 'wb_text'
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(256), unique=True)
     password = db.Column(db.String(512))
