@@ -3,7 +3,7 @@ import random
 from flask.json import jsonify
 from flask.templating import render_template
 from flask import Blueprint, flash, request
-from flask_login import login_required, login_user
+from flask_login import login_required, login_user, logout_user
 import jieba
 from werkzeug.utils import redirect
 
@@ -325,6 +325,7 @@ def login():
 @weibo_bp.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
+    logout_user()
     return redirect('/')
 
 
