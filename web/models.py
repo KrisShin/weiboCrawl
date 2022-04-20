@@ -43,6 +43,7 @@ class Weibo(db.Model):
         backref=db.backref('weibo_list', lazy=True),
     )  # 关联topic
     content = db.Column(db.Text)  # 正文
+    from_chaohua = db.Column(db.String(256))  # 来自超话
     # user_avatar = db.Column(db.String(1024))  # 用户头像
     # user_name = db.Column(db.String(256))  # 用户名
     user_id = db.Column(db.Integer, db.ForeignKey('wb_user.id'))  # 关联到用户id
@@ -160,3 +161,20 @@ class User(db.Model, UserMixin):
     is_user = db.Column(db.Boolean, default=False)
 
     __tablename__ = 'wb_user'
+
+    def keys(self):
+        return (
+            'id',
+            'username',
+            'password',
+            'description',
+            'gender',
+            'age',
+            'phone',
+            'avatar',
+            'is_admin',
+            'is_user',
+        )
+
+    def __getitem__(self, item):
+        return getattr(self, item)

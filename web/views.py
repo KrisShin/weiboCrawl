@@ -3,7 +3,7 @@ import random
 from flask.json import jsonify
 from flask.templating import render_template
 from flask import Blueprint, flash, request
-from flask_login import login_required, login_user, logout_user
+from flask_login import current_user, login_required, login_user, logout_user
 import jieba
 from werkzeug.utils import redirect
 
@@ -50,6 +50,7 @@ def home_page_content():
 
 
 @weibo_bp.route('/home', methods=['GET', 'POST'])
+@login_required
 def show_page():
     '''
     返回首页数据
@@ -318,15 +319,40 @@ def login():
         if not user_obj.is_user:
             return jsonify({'error': '请联系管理员授权登录'})
         login_user(user_obj)
-        flash('欢迎' + user_obj.username)
-        return redirect('/home')
+        return jsonify({'code': 200})
 
 
-@weibo_bp.route('/logout', methods=['GET', 'POST'])
+@weibo_bp.route('/logout', methods=['GET'])
 @login_required
 def logout():
     logout_user()
     return redirect('/')
+
+
+@weibo_bp.route('/user_list', methods=['GET'])
+@login_required
+def user_list():
+    if not current_user.is_admin:
+        return redirect('/logout')
+    user_obj_list = User.query.filter_by(is_admin=False).all()
+    user_list = [dict(user) for user in user_obj_list]
+    resp = default_resp
+    resp.update({'user_list': user_list})
+    return render_template('users.html', **resp)
+
+
+@weibo_bp.route('/allow_login', methods=['POST'])
+@login_required
+def allow_login():
+    if not current_user.is_admin:
+        return redirect('/logout')
+    user_id = request.form.get('user_id')
+    if not user_id:
+        return jsonify({'error': '参数错误'})
+    user_obj = User.query.filter_by(id=user_id).first()
+    user_obj.is_user = not user_obj.is_user
+    db.session.commit()
+    return jsonify({'code': 200})
 
 
 @weibo_bp.route('/register', methods=['GET', 'POST'])
@@ -359,4 +385,4 @@ def register():
             user_obj.description = description
         db.session.add(user_obj)
         db.session.commit()
-        return redirect('/')
+        return jsonify({'code': 200})
