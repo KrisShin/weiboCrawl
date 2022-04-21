@@ -1,4 +1,5 @@
 import random
+import math
 
 from flask.json import jsonify
 from flask.templating import render_template
@@ -24,11 +25,9 @@ def home_page_content():
     page_size = int(request.args.get("page_size", 5))
 
     weibo_list = Weibo.query
-    # total是计算分页总页数的, 如果条数除每页条数正好除尽, 那么总页数就是商, 否则总页数是商+1
-    total = (
-        weibo_list.count() // page_size
-        if weibo_list.count() % page_size == 0
-        else weibo_list.count() // page_size + 1
+    # total是计算分页总页数
+    total = math.ceil(
+        weibo_list.count() / page_size
     )
     # 取page页的page_size条数据
     weibo_list = (

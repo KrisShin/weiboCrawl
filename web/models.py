@@ -80,6 +80,7 @@ class Weibo(db.Model):
             'image_list',
             'video_list',
             'topic_list',
+            'from_chaohua',
         )
 
     def __getitem__(self, item):
@@ -94,6 +95,14 @@ class Weibo(db.Model):
             return self.user.avatar
         elif item == 'user_name':
             return self.user.username
+        elif item == 'at_names':
+            return self.at_names or []
+        elif item == 'video_list':
+            return self.video_list or []
+        elif item == 'image_list':
+            return self.image_list or []
+        elif item == 'topic_list':
+            return self.topic_list or []
         return getattr(self, item)
 
 
