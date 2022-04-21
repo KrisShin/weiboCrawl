@@ -1,4 +1,5 @@
 from web.global_variable import db
+from sqlalchemy.dialects.mysql import LONGTEXT
 from flask_login import UserMixin
 
 
@@ -9,7 +10,7 @@ class Weibo(db.Model):
 
     __tablename__ = 'wb_weibo'
     mid = db.Column(db.String(32), primary_key=True)  # 唯一主键
-    content = db.Column(db.Text)  # 正文
+    content = db.Column(LONGTEXT)  # 正文
     from_chaohua = db.Column(db.String(256))  # 来自超话
     # user_avatar = db.Column(db.String(1024))  # 用户头像
     # user_name = db.Column(db.String(256))  # 用户名
@@ -77,7 +78,7 @@ class WeiboText(db.Model):
 
     id = db.Column(db.BigInteger, primary_key=True)
     url = db.Column(db.String(1024))
-    response_text = db.Column(db.Text)
+    response_text = db.Column(LONGTEXT)
     response_code = db.Column(db.Integer)
 
     __tablename__ = 'wb_text'

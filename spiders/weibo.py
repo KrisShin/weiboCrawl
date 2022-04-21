@@ -68,9 +68,8 @@ class WeiBoSpider(object):
                 attitudes_count = card['mblog']['attitudes_count']
                 # 视频链接
                 try:
-                    mp4 = json.dumps(
-                        [card['mblog']['page_info']['urls']['mp4_720p_mp4']]
-                    )
+                    mp4 = [card['mblog']['page_info']['urls']['mp4_720p_mp4']]
+                    
                 except KeyError:
                     mp4 = None
                 # 如果正文有图片，则图片链接
@@ -78,13 +77,15 @@ class WeiBoSpider(object):
                 try:
                     all_link = card['mblog']['pics']
                     if all_link:
-                        pic_links = json.dumps([_['large']['url'] for _ in all_link])
+                        pic_links = [_['large']['url'] for _ in all_link]
                 except KeyError:
                     pass
 
                 user_obj = User.query.filter_by(id=user_id).first()
                 if not user_obj:
-                    user_obj = User(id=user_id, username=name, avatar=head_photo, password='123456')
+                    user_obj = User(
+                        id=user_id, username=name, avatar=head_photo, password='123456'
+                    )
                     db.session.add(user_obj)
                 weibo_obj = Weibo.query.filter_by(mid=mid).first()
                 if not weibo_obj:
@@ -104,6 +105,8 @@ class WeiBoSpider(object):
                 db.session.commit()
                 self.count += 1
                 sys.stdout.write('\rCrawling: {}'.format(self.count))
+        if page_count < 0:
+            return
         # 访问下一页
         try:
             since_id = json_result['data']['pageInfo']['since_id']

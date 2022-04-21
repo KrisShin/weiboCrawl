@@ -6,3 +6,5 @@ SECRET_KEY = '3f3438de1ad2adf3cc1c2ebe67a75e859bd4d98ecce399bca2a067c3be057f1e'
 
 # 每次启动爬虫爬取页数
 CRAWL_PAGE_COUNT = 10
+
+PAGE_SIZE = 10

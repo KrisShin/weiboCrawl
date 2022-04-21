@@ -20,6 +20,10 @@ server 端:(flask)
     ```
     grant all privileges on weibo.* to 'webuser'@'localhost';
     ```
+    创建管理员
+    ```
+    insert into wb_user(username, password, is_admin, is_user) values('admin', '123123', true, true);
+    ```
 
 2.  mysql恢复数据
 

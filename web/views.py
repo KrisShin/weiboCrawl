@@ -5,8 +5,9 @@ from flask.templating import render_template
 from flask import Blueprint, flash, request
 from flask_login import current_user, login_required, login_user, logout_user
 import jieba
+from sqlalchemy import desc
 from werkzeug.utils import redirect
-from web.constriant import CRAWL_PAGE_COUNT
+from web.constriant import CRAWL_PAGE_COUNT, PAGE_SIZE
 
 from web.global_variable import db, login_manager, default_resp
 from web.models import Weibo, User
@@ -21,18 +22,14 @@ def load_user(user_id):
 
 
 def home_page_content():
-    page = int(request.args.get("page", 1))
-    page_size = int(request.args.get("page_size", 5))
+    page = int(request.args.get("page", 0))
+    page_size = int(request.args.get("page_size", PAGE_SIZE))
 
-    weibo_list = Weibo.query
+    weibo_list = Weibo.query.order_by(desc(Weibo.publish_time))
     # total是计算分页总页数
     total = math.ceil(weibo_list.count() / page_size)
     # 取page页的page_size条数据
-    weibo_list = (
-        weibo_list.order_by(Weibo.publish_time.desc())
-        .offset(page * page_size)
-        .limit(page_size)
-    )
+    weibo_list = weibo_list.offset(page * page_size).limit(page_size)
     # 全部格式化为dict对象才能返回
     weibo_list = [dict(weibo) for weibo in weibo_list]
     resp = default_resp
@@ -91,8 +88,8 @@ def weibo_page_filter_by_keyword():
     # 获取参数
     key_string = request.args.get('search_str')
     # 分页相关
-    page = int(request.args.get("page", 1))
-    page_size = int(request.args.get("page_size", 1000))
+    page = int(request.args.get("page", 0))
+    page_size = int(request.args.get("page_size", PAGE_SIZE))
 
     # 如果使用的是屏蔽关键词, 那么exclued是True
     exclude = bool(request.args.get('exclude'))
@@ -128,7 +125,7 @@ def weibo_page_filter_by_keyword():
     # 将所有获得的帖子按照发布时间排序, 新发布的帖子排到前面
     weibo_list = (
         Weibo.query.filter(Weibo.mid.in_(weibo_list))
-        .order_by('publish_time')
+        .order_by(desc(Weibo.publish_time))
         .offset((page - 1) * page_size)
         .limit(page_size)
     )

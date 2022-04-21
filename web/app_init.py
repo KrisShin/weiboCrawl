@@ -13,7 +13,7 @@ def create_app():
     database = r'weibo'
     host = 'localhost'
     port = '3306'
-    db_url = f'{db_type}://{user}:{password}@{host}:{port}/{database}?charset=utf8'
+    db_url = f'{db_type}://{user}:{password}@{host}:{port}/{database}?charset=utf8mb4'
 
     app.config.update(
         SQLALCHEMY_DATABASE_URI=db_url,

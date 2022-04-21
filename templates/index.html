@@ -116,11 +116,11 @@
               <div class="arc-synopsis">
                 <p>{{feed.content}}</p>
                 {% for img in feed.image_list %}
-                <img src="{{img}}" alt="{{feed.content[:10]}}" class="img-fluid rounded w-200" />
+                <img src="{{img}}" alt="{{feed.content[:10]}}" class="img-fluid rounded w-200 m-1" />
                 {% endfor %}
                 {% for video in feed.video_list %}
                 <!-- <video src="{{video}}" class="img-fluid" width="320" height="240"></video> -->
-                <video width="320" height="240" controls preload="auto">
+                <video width="320" height="240" controls preload="auto" class="m-1">
                   <source src="{{video}}" type="video/mp4">
                   您的浏览器不支持 video 标签。
                 </video>
@@ -137,18 +137,24 @@
                   <li class="page-item"><a class="page-link" href="/home?page={{page-1}}&page_size={{page_size}}"><i
                         class="mdi mdi-chevron-left"></i></a></li>
                   {% endif %}
-                  {% for x in range((page-5 if page-5>1 else 1), (total if total < page+5 else page+5)) %} {% if x==page
-                    %} <li class="page-item active"><a class="page-link"
-                      href="/home?page={{x}}&page_size={{page_size}}">{{x}}</a></li>
+                  {% for x in range((page-5 if page-5 > 0 else 0), (total if total < page + 5 else page + 5)) %} 
+                    {% if x==page %} 
+                    <li class="page-item active">
+                      <a class="page-link" href="/home?page={{x}}&page_size={{page_size}}">{{x+1}}</a>
+                    </li>
                     {% else %}
-                    <li class="page-item"><a class="page-link" href='/home?page={{x}}&page_size={{page_size}}'>{{x}}</a>
+                    <li class="page-item">
+                      <a class="page-link" href='/home?page={{x}}&page_size={{page_size}}'>{{x+1}}</a>
                     </li>
                     {% endif %}
-                    {% endfor %}
-                    {% if page < total - 1 %} <li class="page-item"><a class="page-link"
-                        href="/home?page={{page+1}}&page_size={{page_size}}"><i class="mdi mdi-chevron-right"></i></a>
-                      </li>
-                      {% endif %}
+                  {% endfor %}
+                  {% if page < total - 1 %} 
+                  <li class="page-item">
+                    <a class="page-link" href="/home?page={{page+1}}&page_size={{page_size}}">
+                      <i class="mdi mdi-chevron-right"></i>
+                    </a>
+                  </li>
+                  {% endif %}
                 </ul>
               </div>
             </div>
