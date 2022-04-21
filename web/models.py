@@ -1,33 +1,6 @@
 from web.global_variable import db
 from flask_login import UserMixin
 
-# topic和weibo中间关联表
-rs_topic_weibo = db.Table(
-    'rs_topic_weibo',
-    db.Column('topic_id', db.Integer, db.ForeignKey('wb_topic.id'), primary_key=True),
-    db.Column(
-        'weibo_mid', db.String(32), db.ForeignKey('wb_weibo.mid'), primary_key=True
-    ),
-)
-
-
-class Topic(db.Model):
-    '''
-    Topic 表, 对应微博话题
-    '''
-
-    __tablename__ = 'wb_topic'
-    id = db.Column(db.Integer, primary_key=True)  # id 唯一主键
-    name = db.Column(db.String(256), unique=True)  # 话题名字
-    hot = db.Column(db.Integer, default=1)  # 话题热度（帖子数量）
-
-    # 以下两个方法是格式化对象成dict对象时使用到的, keys是dict对象有的属性, 下同
-    def keys(self):
-        return ('id', 'name', 'hot')
-
-    def __getitem__(self, item):
-        return getattr(self, item)
-
 
 class Weibo(db.Model):
     '''
@@ -36,12 +9,6 @@ class Weibo(db.Model):
 
     __tablename__ = 'wb_weibo'
     mid = db.Column(db.String(32), primary_key=True)  # 唯一主键
-    topics = db.relationship(
-        'Topic',
-        secondary=rs_topic_weibo,
-        lazy='subquery',
-        backref=db.backref('weibo_list', lazy=True),
-    )  # 关联topic
     content = db.Column(db.Text)  # 正文
     from_chaohua = db.Column(db.String(256))  # 来自超话
     # user_avatar = db.Column(db.String(1024))  # 用户头像
@@ -103,44 +70,6 @@ class Weibo(db.Model):
             return self.image_list or []
         elif item == 'topic_list':
             return self.topic_list or []
-        return getattr(self, item)
-
-
-class Comment(db.Model):
-    '''
-    Comment表, 对应微博评论
-    '''
-
-    __tablename__ = 'wb_comment'
-    id = db.Column(db.String(32), primary_key=True)  # 唯一主键
-    weibo_id = db.Column(db.String(32), db.ForeignKey('wb_weibo.mid'))  # 关联到帖子id
-    weibo = db.relationship(
-        'Weibo', backref=db.backref('comments', lazy='dynamic')
-    )  # 外键关联Weibo
-    # user_avatar = db.Column(db.String(1024))  # 评论用户头像
-    # user_name = db.Column(db.String(256))  # 评论用户名
-    user_id = db.Column(db.Integer, db.ForeignKey('wb_user.id'))  # 关联到用户id
-    user = db.relationship(
-        'User', backref=db.backref('comments', lazy='dynamic')
-    )  # 外键关联User
-    content = db.Column(db.Text)  # 评论内容
-    image = db.Column(db.String(1024))  # 评论图片
-    like_count = db.Column(db.Integer)  # 点赞数量
-    reply_count = db.Column(db.Integer)  # 回复数量
-
-    def keys(self):
-        return (
-            'id',
-            'weibo_id',
-            'user_avatar',
-            'user_name',
-            'content',
-            'image',
-            'like_count',
-            'reply_count',
-        )
-
-    def __getitem__(self, item):
         return getattr(self, item)
 
 

@@ -9,7 +9,7 @@ import jieba
 from werkzeug.utils import redirect
 
 from web.global_variable import db, login_manager, default_resp
-from web.models import Topic, Weibo, Comment, User
+from web.models import Weibo, User
 
 # 创建蓝图用于管理url
 weibo_bp = Blueprint('weibo', __name__, template_folder='templates')
@@ -26,9 +26,7 @@ def home_page_content():
 
     weibo_list = Weibo.query
     # total是计算分页总页数
-    total = math.ceil(
-        weibo_list.count() / page_size
-    )
+    total = math.ceil(weibo_list.count() / page_size)
     # 取page页的page_size条数据
     weibo_list = (
         weibo_list.order_by(Weibo.publish_time.desc())
@@ -54,39 +52,9 @@ def show_page():
     '''
     返回首页数据
     '''
-    # 获取热度最高的前8个Topic 左下角展示的那一列
-    topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
-    # 格式化Topic对象为dict对象用于返回json格式
-    topic_list = [dict(topic) for topic in topic_list]
 
     resp = home_page_content()
-    resp.update(
-        {
-            'topic_list': topic_list,
-        }
-    )
     return render_template('index.html', **resp)
-
-
-@weibo_bp.route('/all_topic', methods=['GET'])
-def api_get_all_topic():
-    '''
-    测试接口 用于获取所有的topic
-    '''
-    topic_list = Topic.query.order_by(Topic.hot).all()
-    topic_list = [dict(topic) for topic in topic_list]
-    return jsonify(topic_list)
-
-
-@weibo_bp.route('/all_comment', methods=['GET'])
-def api_get_all_comment():
-    '''
-    测试接口 用于获取所有的comment
-    '''
-
-    comment_list = Comment.query.all()
-    comment_list = [dict(comment) for comment in comment_list]
-    return jsonify(comment_list)
 
 
 @weibo_bp.route('/test_data', methods=['GET'])
@@ -97,34 +65,17 @@ def add_test_data():
     from random import randint
     from datetime import datetime
 
-    for t_id in range(3):
-        t = Topic(name=f'test{t_id}')
-        db.session.add(t)
+    for f_id in range(3):
+        f = Weibo(
+            mid=str(randint(1000, 9999)),
+            content=f'weibo {f_id} of topic {t.name}',
+        )
+        f.forward_count = randint(99, 999)
+        f.comment_count = randint(99, 999)
+        f.like_count = randint(99, 999)
+        f.publish_time = datetime.now()
+        db.session.add(f)
         db.session.commit()
-        for f_id in range(3):
-            f = Weibo(
-                mid=str(randint(1000, 9999)),
-                topic=t,
-                content=f'weibo {f_id} of topic {t.name}',
-            )
-            f.forward_count = randint(99, 999)
-            f.comment_count = randint(99, 999)
-            f.like_count = randint(99, 999)
-            f.publish_time = datetime.now()
-            db.session.add(f)
-            db.session.commit()
-            for c_id in range(3):
-                c = Comment(
-                    id=str(randint(1000, 9999)),
-                    weibo=f,
-                    content=f'comment {c_id} of weibo {f.mid}',
-                )
-                c.publish_time = datetime.now()
-                c.like_count = randint(99, 999)
-                c.reply_count = randint(99, 999)
-                c.reply_like = randint(99, 999)
-                db.session.add(c)
-                db.session.commit()
 
     return jsonify({'msg': 'ok'})
 
@@ -174,19 +125,9 @@ def weibo_page_filter_by_keyword():
     weibo_id_list = []
     weibo_list = []
 
-    # 获取过滤出的topic下的所有weibo
-    for topic in Topic.query.filter(Topic.id.in_(topic_id_list)).all():
-        for weibo in topic.weibos:
-            if weibo.mid not in weibo_id_list:
-                weibo_id_list.append(weibo.mid)
-                weibo_list.append(weibo)
-
     # 将所有获得的帖子按照发布时间排序, 新发布的帖子排到前面
     weibo_list = sorted(weibo_list, key=lambda weibo: weibo.publish_time, reverse=True)
 
-    # 热度前8的topic
-    topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
-    topic_list = [dict(topic) for topic in topic_list]
     # 分页相关
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("page_size", 1000))
@@ -200,7 +141,6 @@ def weibo_page_filter_by_keyword():
     resp = default_resp
     resp.update(
         {
-            'topic_list': topic_list,
             'weibo_list': weibo_list[(page - 1) * page_size : page * page_size],
             'page': page,
             'total': total,
@@ -227,73 +167,6 @@ def update_crawl_data():
 
     job.start()
     return jsonify({'msg': 'OK'})
-
-
-@weibo_bp.route('/weibo', methods=['GET'])
-@login_required
-def weibo_page():
-    '''
-    微博正文详情页面
-    '''
-    # 获取参数
-    mid = request.args.get('mid')
-    # 热门话题
-    topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
-    topic_list = [dict(topic) for topic in topic_list]
-
-    weibo = Weibo.query.filter_by(mid=mid).first()
-    # 获取weibo的所有comment并格式化为dict
-    comment_list = [dict(comment) for comment in weibo.comments]
-
-    resp = default_resp
-    resp.update(
-        {
-            'weibo': dict(weibo),
-            'comment_list': comment_list,
-            'topic_list': topic_list,
-        }
-    )
-    return render_template('post.html', **resp)
-
-
-@weibo_bp.route('/topic', methods=['GET'])
-@login_required
-def weibo_page_filter_by_topic():
-    '''
-    按话题过滤weibo
-    '''
-    # 热门话题
-    topic_list = Topic.query.order_by(Topic.hot.desc()).limit(8).all()
-    topic_list = [dict(topic) for topic in topic_list]
-
-    # 获取参数
-    topic_id = request.args.get('topic')
-    topic_obj = Topic.query.filter_by(id=int(topic_id)).first()
-
-    # 该topic下的weibo
-    weibo_list = [dict(weibo) for weibo in topic_obj.weibos]
-
-    # 分页
-    page = int(request.args.get("page", 1))
-    page_size = int(request.args.get("page_size", 1000))
-    weibo_count = len(weibo_list)
-    total = (
-        weibo_count // page_size
-        if weibo_count // page_size == 0
-        else weibo_count // page_size + 1
-    )
-
-    resp = default_resp
-    resp.update(
-        {
-            'topic_list': topic_list,
-            'weibo_list': weibo_list[(page - 1) * page_size : page * page_size],
-            'page': page,
-            'total': total,
-        }
-    )
-
-    return render_template('index.html', **resp)
 
 
 @weibo_bp.route('/', methods=['GET', 'POST'])
