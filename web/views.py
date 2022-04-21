@@ -1,4 +1,3 @@
-import random
 import math
 
 from flask.json import jsonify
@@ -7,6 +6,7 @@ from flask import Blueprint, flash, request
 from flask_login import current_user, login_required, login_user, logout_user
 import jieba
 from werkzeug.utils import redirect
+from web.constriant import CRAWL_PAGE_COUNT
 
 from web.global_variable import db, login_manager, default_resp
 from web.models import Weibo, User
@@ -41,6 +41,7 @@ def home_page_content():
             'weibo_list': weibo_list,
             'total': total,
             'page': page,
+            'page_size': page_size,
         }
     )
     return resp
@@ -68,7 +69,7 @@ def add_test_data():
     for f_id in range(3):
         f = Weibo(
             mid=str(randint(1000, 9999)),
-            content=f'weibo {f_id} of topic {t.name}',
+            content=f'weibo {f_id} ',
         )
         f.forward_count = randint(99, 999)
         f.comment_count = randint(99, 999)
@@ -89,6 +90,10 @@ def weibo_page_filter_by_keyword():
     '''
     # 获取参数
     key_string = request.args.get('search_str')
+    # 分页相关
+    page = int(request.args.get("page", 1))
+    page_size = int(request.args.get("page_size", 1000))
+
     # 如果使用的是屏蔽关键词, 那么exclued是True
     exclude = bool(request.args.get('exclude'))
     if not key_string.split():
@@ -99,17 +104,17 @@ def weibo_page_filter_by_keyword():
     keywords = jieba.cut(key_string, cut_all=True)
 
     # sql语句, 因为分词结果较为复杂, 为了效率使用sql语句一次查询
-    pre_sql_string = '''select id from topic where '''
+    pre_sql_string = '''select distinct mid from wb_weibo where '''
     # 用于存放分出的关键词来返回
     words = []
     # 拼接sql语句
     word_split_string = []
     for word in keywords:
         if exclude:
-            word_split_string.append(f'''name not like '%{word}%' ''')
+            word_split_string.append(f'''content not like '%{word}%' ''')
         else:
             words.append(word)
-            word_split_string.append(f'''name like '%{word}%' ''')
+            word_split_string.append(f'''content like '%{word}%' ''')
     if exclude:
         key_sql_string = ' and '.join(word_split_string)
     else:
@@ -118,19 +123,17 @@ def weibo_page_filter_by_keyword():
 
     res = db.session.execute(sql_string)
 
-    # 获取跟搜索关键词相关的topic的ID
-    topic_id_list = [t[0] for t in res]
-
-    # weibo的id列表, 用于去重
-    weibo_id_list = []
-    weibo_list = []
+    weibo_list = [x[0] for x in res]
 
     # 将所有获得的帖子按照发布时间排序, 新发布的帖子排到前面
-    weibo_list = sorted(weibo_list, key=lambda weibo: weibo.publish_time, reverse=True)
+    weibo_list = (
+        Weibo.query.filter(Weibo.mid.in_(weibo_list))
+        .order_by('publish_time')
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    weibo_list = [dict(weibo) for weibo in weibo_list]
 
-    # 分页相关
-    page = int(request.args.get("page", 1))
-    page_size = int(request.args.get("page_size", 1000))
     weibo_count = len(weibo_list)
     total = (
         weibo_count // page_size
@@ -141,8 +144,9 @@ def weibo_page_filter_by_keyword():
     resp = default_resp
     resp.update(
         {
-            'weibo_list': weibo_list[(page - 1) * page_size : page * page_size],
+            'weibo_list': weibo_list,
             'page': page,
+            'page_size': page_size,
             'total': total,
             'words': words,
         }
@@ -156,16 +160,15 @@ def update_crawl_data():
     '''
     开启一个线程启动爬虫程序
     '''
-    from spiders import weibo_hot
+    from spiders.weibo import WeiBoSpider
     from threading import Thread
 
-    # 爬取条数 随机80-100，不建议太多，数量太多或者爬虫太频繁可能触发微博反爬机制
-    crawl_number = random.randint(80, 100)
-
+    # 爬取页数 随机5-10页，不建议太多，数量太多或者爬虫太频繁可能触发微博反爬机制
+    WeiBoSpider().run(CRAWL_PAGE_COUNT)
     # 单独开启一个线程运行爬虫程序, 避免请求挂起
-    job = Thread(target=weibo_hot.run_spider, args=(crawl_number,))
+    # job = Thread(target=WeiBoSpider().run, args=(CRAWL_PAGE_COUNT,))
 
-    job.start()
+    # job.start()
     return jsonify({'msg': 'OK'})
 
 
@@ -182,10 +185,7 @@ def login():
             return jsonify({'error': '缺少参数'})
         user_obj = User.query.filter_by(username=username).first()
         if not user_obj:
-            user_obj = User(username=username, password=password)
-            db.session.add(user_obj)
-            db.session.commit()
-            # return jsonify({'error': '用户不存在'})
+            return jsonify({'error': '用户不存在'})
         if password != user_obj.password:
             return jsonify({'error': '密码错误'})
         if not user_obj.is_user:

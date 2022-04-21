@@ -13,7 +13,7 @@ class Weibo(db.Model):
     from_chaohua = db.Column(db.String(256))  # 来自超话
     # user_avatar = db.Column(db.String(1024))  # 用户头像
     # user_name = db.Column(db.String(256))  # 用户名
-    user_id = db.Column(db.Integer, db.ForeignKey('wb_user.id'))  # 关联到用户id
+    user_id = db.Column(db.BigInteger, db.ForeignKey('wb_user.id'))  # 关联到用户id
     user = db.relationship(
         'User', backref=db.backref('weibo_list', lazy='dynamic')
     )  # 外键关联User
@@ -32,7 +32,6 @@ class Weibo(db.Model):
     def keys(self):
         return (
             'mid',
-            'topics',
             'content',
             'user_avatar',
             'user_name',
@@ -51,9 +50,7 @@ class Weibo(db.Model):
         )
 
     def __getitem__(self, item):
-        if item == 'topic':
-            return [topic.name for topic in self.topics]
-        elif item == 'publish_time':
+        if item == 'publish_time':
             # 如果发布时间有值则取前19位, 去除utc格式时间的无效小数位
             return (
                 getattr(self, item)[:19] if getattr(self, item) else getattr(self, item)
@@ -78,7 +75,7 @@ class WeiboText(db.Model):
     爬取下来的网页原始文件
     """
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.BigInteger, primary_key=True)
     url = db.Column(db.String(1024))
     response_text = db.Column(db.Text)
     response_code = db.Column(db.Integer)
@@ -87,7 +84,7 @@ class WeiboText(db.Model):
 
 
 class User(db.Model, UserMixin):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.BigInteger, primary_key=True)
     username = db.Column(db.String(256), unique=True)
     password = db.Column(db.String(512))
     description = db.Column(db.Text)

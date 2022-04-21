@@ -5,42 +5,39 @@ import sys
 
 import requests
 import json
-import pymysql
+from datetime import datetime
 
 from w3lib import html
 
+from web.global_variable import db
 
-class WeiBo(object):
+from web.constriant import BASE_CRAWL_URL
+from web.models import User, Weibo, WeiboText
 
+
+class WeiBoSpider(object):
     def __init__(self):
         # 首页的url，翻页的url是通过since_id控制的，下一页的since_id可以在当前页的响应中获取
-        self.url = 'https://m.weibo.cn/api/container/getIndex?containerid=1008088f7809e2286a4cbd0e5aa8a352ffbca6&luicode=10000011&lfid=100103type%3D1%26q%3D%E5%B1%B1%E8%A5%BF%E5%B7%A5%E5%95%86%E5%AD%A6%E9%99%A2'
+        self.url = BASE_CRAWL_URL
         self.count = 0
-        self.coon = pymysql.connect(
-            host='101.34.234.17',
-            port=3306,
-            user='webuser',
-            password='123456',
-            database='weibo',
-            charset='utf8'
-        )
-        self.cursor = self.coon.cursor()
 
-    def run(self):
+    def run(self, page_count):
         res = self.get_response(self.url)
-        self.parse_data(res)
+        self.parse_data(res, page_count)
 
-    def get_response(self, my_url):
+    def get_response(self, url):
         # 访问url，获取响应
-        r = requests.get(my_url)
+        r = requests.get(url)
         # 访问完成之后，这里将响应源码存入数据库
         # wb_text表
-        sql = "insert ignore into wb_text (url, response_text, response_code) values (%s, %s, %s);"
-        self.cursor.execute(sql, [my_url, r.text, "200"])
-        self.coon.commit()
+        weibo_text = WeiboText(
+            url=url, response_text=r.text, response_code=r.status_code
+        )
+        db.session.add(weibo_text)
+        db.session.commit()
         return r.text
 
-    def parse_data(self, response):
+    def parse_data(self, response, page_count):
         # 解析数据
         json_result = json.loads(response)
         # 解析该页数据
@@ -56,19 +53,24 @@ class WeiBo(object):
                 card_text = card['mblog']['text']
                 # 正文内容
                 text = html.remove_tags(card_text).strip('山西工商学院').strip()
+                user_id = card['mblog']['user']['id']
                 # 昵称
                 name = card['mblog']['user']['screen_name']
                 # 头像
                 head_photo = card['mblog']['user']['profile_image_url']
                 # 发布时间
-                timestamp_text = ' '.join(card['mblog']['created_at'].split()[:-2])
+                timestamp_text = datetime.strptime(
+                    card['mblog']['created_at'], '%a %b %d %H:%M:%S %z %Y'
+                )
                 # 评论数
                 comments_count = card['mblog']['comments_count']
                 # 点赞数
                 attitudes_count = card['mblog']['attitudes_count']
                 # 视频链接
                 try:
-                    mp4 = json.dumps([card['mblog']['page_info']['urls']['mp4_720p_mp4']])
+                    mp4 = json.dumps(
+                        [card['mblog']['page_info']['urls']['mp4_720p_mp4']]
+                    )
                 except KeyError:
                     mp4 = None
                 # 如果正文有图片，则图片链接
@@ -80,17 +82,26 @@ class WeiBo(object):
                 except KeyError:
                     pass
 
-                # wb_user表
-                sql_1 = 'insert ignore into wb_user (username, avatar, password) values (%s, %s, %s);'
-                # wb_weibo表
-                sql_2 = 'insert ignorey100 into wb_weibo (user_id, mid, publish_time, from_chaohua, comment_count, like_count, content, video_list, image_list) values (%s, %s, %s, %s, %s, %s, %s, %s, %s);'
-                self.cursor.execute(sql_1, [name, head_photo, '123456'])
-                # user_id
-                user_id = str(self.cursor.lastrowid)
-                self.cursor.execute(sql_2,
-                                    [user_id, mid, timestamp_text, '山西工商学院超话', comments_count, attitudes_count, text,
-                                     mp4, pic_links])
-                self.coon.commit()
+                user_obj = User.query.filter_by(id=user_id).first()
+                if not user_obj:
+                    user_obj = User(id=user_id, username=name, avatar=head_photo, password='123456')
+                    db.session.add(user_obj)
+                weibo_obj = Weibo.query.filter_by(mid=mid).first()
+                if not weibo_obj:
+                    weibo_obj = Weibo(
+                        user=user_obj,
+                        mid=mid,
+                        publish_time=timestamp_text,
+                        from_chaohua='山西工商学院超话',
+                        comment_count=comments_count,
+                        video_list=mp4,
+                        image_list=pic_links,
+                        content=text,
+                    )
+                    db.session.add(weibo_obj)
+                weibo_obj.like_count = attitudes_count
+                weibo_obj.comment_count = comments_count
+                db.session.commit()
                 self.count += 1
                 sys.stdout.write('\rCrawling: {}'.format(self.count))
         # 访问下一页
@@ -99,12 +110,12 @@ class WeiBo(object):
             # 下一页的url
             next_url = self.url + f'&since_id={since_id}'
             next_res = self.get_response(next_url)
-            self.parse_data(next_res)
+            self.parse_data(next_res, page_count - 1)
         except KeyError:
             # 结束，关闭数据库连接
-            self.coon.close()
             self.cursor.close()
+            self.driver.db.close()
 
 
 if __name__ == '__main__':
-    WeiBo().run()
+    WeiBoSpider().run()
