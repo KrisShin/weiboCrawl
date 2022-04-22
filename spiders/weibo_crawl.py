@@ -99,7 +99,7 @@ class WeiBoSpider(object):
                         content=text,
                     )
                     db.session.add(weibo_obj)
-                weibo_obj.video_list=mp4,
+                weibo_obj.video_list=mp4
                 weibo_obj.like_count = attitudes_count
                 weibo_obj.comment_count = comments_count
                 db.session.commit()

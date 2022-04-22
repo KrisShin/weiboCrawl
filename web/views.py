@@ -39,6 +39,7 @@ def home_page_content():
             'total': total,
             'page': page,
             'page_size': page_size,
+            'search_str': None,
         }
     )
     return resp
@@ -122,26 +123,23 @@ def weibo_page_filter_by_keyword():
 
     weibo_list = [x[0] for x in res]
 
+    weibo_count = len(weibo_list)
+    total = math.ceil(weibo_count / page_size)
+
     # 将所有获得的帖子按照发布时间排序, 新发布的帖子排到前面
     weibo_list = (
         Weibo.query.filter(Weibo.mid.in_(weibo_list))
         .order_by(desc(Weibo.publish_time))
-        .offset((page - 1) * page_size)
+        .offset(page * page_size)
         .limit(page_size)
     )
     weibo_list = [dict(weibo) for weibo in weibo_list]
-
-    weibo_count = len(weibo_list)
-    total = (
-        weibo_count // page_size
-        if weibo_count // page_size == 0
-        else weibo_count // page_size + 1
-    )
 
     resp = default_resp
     resp.update(
         {
             'weibo_list': weibo_list,
+            'search_str': key_string,
             'page': page,
             'page_size': page_size,
             'total': total,
