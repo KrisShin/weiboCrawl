@@ -95,17 +95,18 @@ class WeiBoSpider(object):
                         publish_time=timestamp_text,
                         from_chaohua='山西工商学院超话',
                         comment_count=comments_count,
-                        video_list=mp4,
                         image_list=pic_links,
                         content=text,
                     )
                     db.session.add(weibo_obj)
+                weibo_obj.video_list=mp4,
                 weibo_obj.like_count = attitudes_count
                 weibo_obj.comment_count = comments_count
                 db.session.commit()
                 self.count += 1
                 sys.stdout.write('\rCrawling: {}'.format(self.count))
         if page_count < 0:
+            sys.stdout.write('\n'.format(self.count))
             return
         # 访问下一页
         try:

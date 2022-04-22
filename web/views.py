@@ -157,7 +157,7 @@ def update_crawl_data():
     '''
     开启一个线程启动爬虫程序
     '''
-    from spiders.weibo import WeiBoSpider
+    from spiders.weibo_crawl import WeiBoSpider
     from threading import Thread
 
     # 爬取页数 随机5-10页，不建议太多，数量太多或者爬虫太频繁可能触发微博反爬机制
