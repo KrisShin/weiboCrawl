@@ -3,10 +3,17 @@ from web.constriant import SECRET_KEY
 from web.global_variable import db, register_view_blueprint, migrate, login_manager
 from web.views import weibo_bp
 
+import os
+
 
 def create_app():
+    base_path = os.path.abspath('.')
     # 初始化app 并配置数据库连接
-    app = Flask(__name__, static_folder='../static', template_folder='../templates')
+    app = Flask(
+        __name__,
+        static_folder=f'{base_path}/web/static',
+        template_folder=f'{base_path}/web/templates',
+    )
     db_type = r'mysql+pymysql'
     user = r'webuser'
     password = r'123456'
